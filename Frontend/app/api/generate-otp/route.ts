@@ -4,9 +4,11 @@ import bcrypt from "bcryptjs";
 import { connect } from "../../../dbConfig";
 import Otp from "../../../models/otpModel";
 
-export default async function POST(request) {
+// ✅ This is what Next.js expects
+export async function POST(request) {
   try {
     await connect();
+    console.log("Connected to MongoDB");
 
     const { email } = await request.json();
     if (!email) {
@@ -20,10 +22,10 @@ export default async function POST(request) {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedOtp = bcrypt.hashSync(otp, 10);
 
-    // Remove any existing OTP
+    // Remove existing OTP
     await Otp.deleteMany({ email });
 
-    // Create new OTP record
+    // Save new OTP
     const newOtp = new Otp({
       email,
       otp: hashedOtp,
@@ -33,7 +35,7 @@ export default async function POST(request) {
 
     await newOtp.save();
 
-    // Configure email transporter
+    // Configure nodemailer
     const transporter = nodemailer.createTransport({
       service: process.env.EMAIL_SERVICE,
       auth: {
@@ -42,7 +44,7 @@ export default async function POST(request) {
       },
     });
 
-    // Send email with OTP
+    // Send email
     await transporter.sendMail({
       from: process.env.EMAIL_FROM,
       to: email,
