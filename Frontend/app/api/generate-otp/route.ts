@@ -8,7 +8,6 @@ import Otp from "../../../models/otpModel";
 export async function POST(request) {
   try {
     await connect();
-    console.log("Connected to MongoDB");
 
     const { email } = await request.json();
     if (!email) {

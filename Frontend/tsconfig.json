@@ -24,7 +24,9 @@
     ".next/types/**/*.ts",
     "**/*.ts",
     "**/*.tsx",
-    "app/api/generate-otp/route.js"
+    "app/api/generate-otp/route.js",
+    "app/contexts/AuthContext.js",
+    "app/api/verify-otp/route.js"
   ],
   "exclude": ["node_modules"]
 }

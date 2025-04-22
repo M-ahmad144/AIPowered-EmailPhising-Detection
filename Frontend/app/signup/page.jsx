@@ -5,10 +5,11 @@ import axios from "axios";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function SignupPage() {
   const router = useRouter();
-
+  const { setContextPassword } = useAuth();
   // form state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,6 +24,7 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const { isVerified } = useAuth();
   // Check password strength
   useEffect(() => {
     if (!password) {
@@ -82,16 +84,27 @@ export default function SignupPage() {
     if (!validate()) return;
 
     try {
+      setContextPassword(password);
       setErrorMessage("");
       setLoading(true);
-      const res = await axios.post("/api/signup", { email, password });
+
+      const res = await axios.post("/api/generate-otp", { email });
       if (res.status === 200) {
         router.push(`/otp?email=${encodeURIComponent(email)}`);
       }
+
+      console.log(isVerified);
+      if (isVerified) {
+        const res = await axios.post("/api/signup", { email, password });
+        if (res.status === 200) {
+          router.push("/login");
+        }
+      }
+
       setLoading(false);
     } catch (err) {
       setLoading(false);
-      setErrorMessage(err.response?.data?.message || "Signup failed");
+      setErrorMessage(err.response?.data?.message || "Failed to send OTP");
     }
   };
 
@@ -125,7 +138,6 @@ export default function SignupPage() {
                 alt="Company Logo"
                 src="https://tailwindcss.com/_next/static/media/tailwindcss-mark.d52e9897.svg"
                 className="w-auto h-16"
-                st
               />
             </motion.div>
 
