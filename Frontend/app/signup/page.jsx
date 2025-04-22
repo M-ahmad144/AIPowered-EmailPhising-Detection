@@ -49,6 +49,7 @@ export default function SignupPage() {
       }
       setLoading(false);
     } catch (err) {
+      setLoading(false);
       setErrorMessage(err.response?.data?.message || "Signup failed");
     }
   };
