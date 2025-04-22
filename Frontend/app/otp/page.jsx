@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext"; // Import the AuthContext
+import { useCallback } from "react";
 
 export default function OtpPage() {
   const searchParams = useSearchParams();
@@ -16,7 +17,7 @@ export default function OtpPage() {
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
   const inputRefs = useRef([]);
   const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState("info"); // 'info', 'error', 'success'
+  const [messageType, setMessageType] = useState("info");
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [countdown, setCountdown] = useState(60);
@@ -33,11 +34,10 @@ export default function OtpPage() {
     }
   }, [email, router]);
 
-  // Send OTP on mount
   useEffect(() => {
     if (!email) return;
     sendOtp();
-  }, [email]);
+  }, [email, sendOtp]);
 
   // Countdown timer for resend button
   useEffect(() => {
@@ -51,37 +51,33 @@ export default function OtpPage() {
     }
   }, [countdown, resendDisabled]);
 
-  const sendOtp = async () => {
-    setSending(true);
-    setMessageType("info");
-    setMessage("Sending verification code...");
-
+  const sendOtp = useCallback(async () => {
     try {
-      const res = await fetch(generateRoute, {
+      setSending(true);
+      const response = await fetch(generateRoute, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
 
-      if (!res.ok) {
-        throw new Error(`HTTP error! Status: ${res.status}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setMessage("OTP sent successfully!");
+        setMessageType("success");
+        setResendDisabled(true);
+        setCountdown(60);
+      } else {
+        setMessage(data.error || "Failed to send OTP.");
+        setMessageType("error");
       }
-
-      const data = await res.json();
-      setMessageType("success");
-      setMessage(data.message || "Verification code sent successfully");
-
-      // Reset countdown
-      setCountdown(60);
-      setResendDisabled(true);
     } catch (error) {
-      console.error("Error sending OTP:", error);
+      setMessage("Error sending OTP.");
       setMessageType("error");
-      setMessage("Failed to send verification code. Please try again.");
     } finally {
       setSending(false);
     }
-  };
+  }, [email, generateRoute]);
 
   const resendOtp = async () => {
     try {
@@ -241,7 +237,7 @@ export default function OtpPage() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
             >
-              <p>We've sent a 6-digit verification code to</p>
+              <p>We have sent a 6-digit verification code to</p>
               <p className="mt-1 font-medium">{email}</p>
             </motion.div>
 
@@ -366,7 +362,7 @@ export default function OtpPage() {
 
               <div className="mt-6 text-center">
                 <p className="mb-2 text-gray-600 text-sm">
-                  Didn't receive the code?
+                  Did not receive the code?
                 </p>
                 <button
                   onClick={resendDisabled ? null : resendOtp}
