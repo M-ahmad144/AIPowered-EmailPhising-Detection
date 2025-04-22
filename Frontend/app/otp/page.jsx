@@ -1,17 +1,24 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { useAuth } from "../contexts/AuthContext"; // Import the AuthContext
-import { useCallback } from "react";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function OtpPage() {
-  const searchParams = useSearchParams();
-  const email = searchParams.get("email") || "";
+  const [email, setEmail] = useState("");
   const router = useRouter();
   const { contextPassword } = useAuth();
+
+  // Read email from URL params on client side
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const emailFromParams = params.get("email");
+    if (emailFromParams) {
+      setEmail(emailFromParams);
+    }
+  }, []);
 
   // For individual OTP inputs
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
@@ -27,7 +34,6 @@ export default function OtpPage() {
   const generateRoute = "/api/generate-otp";
   const verifyRoute = "/api/verify-otp";
 
-  // Redirect back if no email in URL
   useEffect(() => {
     if (!email) {
       router.push("/signup");
