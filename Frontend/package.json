@@ -8,6 +8,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@netlify/next": "^1.4.9",
     "axios": "^1.8.4",
     "bcryptjs": "^3.0.2",
     "framer-motion": "^12.7.4",
