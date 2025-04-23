@@ -4,7 +4,6 @@ import bcrypt from "bcryptjs";
 import { connect } from "../../../dbConfig";
 import Otp from "../../../models/otpModel";
 
-// ✅ This is what Next.js expects
 export async function POST(request) {
   try {
     await connect();

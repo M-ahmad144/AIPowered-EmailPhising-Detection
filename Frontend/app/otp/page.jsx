@@ -35,15 +35,15 @@ export default function OtpPage() {
   const verifyRoute = "/api/verify-otp";
 
   useEffect(() => {
-    if (!email) {
-      router.push("/signup");
-    }
-  }, [email, router]);
+    if (!router.isReady) return;
 
-  useEffect(() => {
-    if (!email) return;
-    sendOtp();
-  }, [email, sendOtp]);
+    const queryEmail = router.query.email;
+    if (!queryEmail) {
+      router.push("/signup");
+    } else {
+      setEmail(queryEmail);
+    }
+  }, [router.isReady]);
 
   // Countdown timer for resend button
   useEffect(() => {
@@ -374,7 +374,6 @@ export default function OtpPage() {
                   onClick={resendDisabled ? null : resendOtp}
                   disabled={resendDisabled || sending}
                   className="flex justify-center items-center mx-auto font-medium text-indigo-600 hover:text-indigo-500 disabled:text-indigo-400 text-sm transition-colors duration-300 disabled:cursor-not-allowed"
-                  whileHover={{ scale: 1.02 }}
                 >
                   {sending ? (
                     <svg
