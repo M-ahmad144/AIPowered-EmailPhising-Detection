@@ -24,7 +24,6 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const { isVerified } = useAuth();
   // Check password strength
   useEffect(() => {
     if (!password) {
@@ -88,17 +87,9 @@ export default function SignupPage() {
       setErrorMessage("");
       setLoading(true);
 
-      const res = await axios.post("/api/generate-otp", { email });
+      // const res = await axios.post("/api/generate-otp", { email });
       if (res.status === 200) {
         router.push(`/otp?email=${encodeURIComponent(email)}`);
-      }
-
-      console.log(isVerified);
-      if (isVerified) {
-        const res = await axios.post("/api/signup", { email, password });
-        if (res.status === 200) {
-          router.push("/login");
-        }
       }
 
       setLoading(false);

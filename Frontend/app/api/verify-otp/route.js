@@ -7,7 +7,6 @@ import User from "../../../models/userModel";
 export async function POST(request) {
   try {
     await connect();
-
     const { email, otp, password } = await request.json();
 
     // Validate required fields

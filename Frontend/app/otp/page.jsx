@@ -85,6 +85,12 @@ export default function OtpPage() {
     }
   }, [email, generateRoute]);
 
+  useEffect(() => {
+    if (email) {
+      sendOtp();
+    }
+  }, [email, sendOtp]);
+
   const resendOtp = async () => {
     try {
       const res = await fetch("/api/resend-otp", {
