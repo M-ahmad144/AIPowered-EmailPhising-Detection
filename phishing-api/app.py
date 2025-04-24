@@ -5,6 +5,9 @@ import re
 
 app = Flask(__name__)
 
+
+
+
 # Load model and tokenizer once
 tokenizer = AutoTokenizer.from_pretrained("cybersectony/phishing-email-detection-distilbert_v2.4.1")
 model = AutoModelForSequenceClassification.from_pretrained("cybersectony/phishing-email-detection-distilbert_v2.4.1")
