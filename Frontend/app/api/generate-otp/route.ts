@@ -21,7 +21,10 @@ export async function POST(request) {
     const hashedOtp = bcrypt.hashSync(otp, 10);
 
     // Remove existing OTP
-    await Otp.deleteMany({ email });
+    await Otp.deleteMany({
+      email,
+      expiresAt: { $lt: new Date() },
+    });
 
     // Save new OTP
     const newOtp = new Otp({

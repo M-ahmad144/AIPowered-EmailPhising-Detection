@@ -1,16 +1,27 @@
 import mongoose from "mongoose";
 
-export async function connect() {
-  try {
-    mongoose.connect(process.env.MONGODB_URL);
-    const connect = mongoose.connection;
+let isConnected = false;
 
-    connect.on("connected", () => console.log("Connected to MongoDB"));
-    connect.on("error", (err) => {
-      console.log(err);
-      process.exit();
+export async function connect() {
+  if (isConnected) return;
+
+  try {
+    await mongoose.connect(process.env.MONGODB_URL, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
     });
+
+    mongoose.connection.on("connected", () => {
+      console.log("Connected to MongoDB");
+    });
+
+    mongoose.connection.on("error", (err) => {
+      console.error("MongoDB connection error:", err);
+    });
+
+    isConnected = true;
   } catch (err) {
-    console.log(err);
+    console.error("Error connecting to MongoDB:", err);
+    throw err;
   }
 }
