@@ -1,6 +1,5 @@
 "use client";
 import Image from "next/image";
-import type React from "react";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -15,7 +14,7 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [emailBody, setEmailBody] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     // Handle form submission logic here
     console.log({ email, emailBody });
