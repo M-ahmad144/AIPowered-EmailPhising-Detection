@@ -1,6 +1,5 @@
 "use client";
 import Image from "next/image";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Send } from "lucide-react";
@@ -38,12 +37,7 @@ export default function Home() {
       <header className="px-6 sm:px-12 py-4 border-b">
         <div className="flex justify-between items-center mx-auto max-w-7xl">
           <div className="flex items-center gap-3">
-            <Image
-              src="/placeholder.svg?height=40&width=40"
-              alt="Logo"
-              width={40}
-              height={40}
-            />
+            <Image src="/logo.png" alt="Logo" width={40} height={40} />
             <h1 className="font-bold text-gray-800 text-xl sm:text-2xl">
               Email Phishing Prevention System
             </h1>
