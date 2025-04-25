@@ -43,7 +43,7 @@ export default function Home() {
   const handleSignOut = async () => {
     try {
       await fetch("/api/signout", { method: "POST" });
-      router.push("/");
+      router.push("/login");
     } catch (err) {
       console.error(err);
     }

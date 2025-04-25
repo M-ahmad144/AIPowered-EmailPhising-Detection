@@ -67,7 +67,7 @@ export async function POST(request) {
     await newUser.save();
 
     // Optionally, delete the OTP after successful signup
-    await Otp.deleteOne({ email });
+    await Otp.deleteMany({ email });
 
     return NextResponse.json(
       { message: "User registered successfully!" },
