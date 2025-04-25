@@ -1,42 +1,41 @@
+// app/api/generate-otp/route.js
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import bcrypt from "bcryptjs";
-import { connect } from "../../../dbConfig";
-import Otp from "../../../models/otpModel";
+import { connect } from "@/dbConfig";
+import Otp from "@/models/otpModel";
 
 export async function POST(request) {
   try {
     await connect();
-
     const { email } = await request.json();
+
     if (!email) {
       return NextResponse.json(
-        { message: "Email is required" },
+        { success: false, error: "Email is required" },
         { status: 400 }
       );
     }
 
-    // Generate OTP
+    // 1) generate & hash OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedOtp = bcrypt.hashSync(otp, 10);
 
-    // Remove existing OTP
+    // 2) remove **expired** OTPs for this email
     await Otp.deleteMany({
       email,
       expiresAt: { $lt: new Date() },
     });
 
-    // Save new OTP
-    const newOtp = new Otp({
+    // 3) save new OTP
+    await new Otp({
       email,
       otp: hashedOtp,
       createdAt: new Date(),
       expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-    });
+    }).save();
 
-    await newOtp.save();
-
-    // Configure nodemailer
+    // 4) send email
     const transporter = nodemailer.createTransport({
       service: process.env.EMAIL_SERVICE,
       auth: {
@@ -45,7 +44,6 @@ export async function POST(request) {
       },
     });
 
-    // Send email
     await transporter.sendMail({
       from: process.env.EMAIL_FROM,
       to: email,
@@ -64,11 +62,15 @@ export async function POST(request) {
       `,
     });
 
-    return NextResponse.json({ message: "OTP sent successfully" });
+    // 5) return success flag
+    return NextResponse.json(
+      { success: true, message: "OTP sent successfully" },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error sending OTP:", error);
     return NextResponse.json(
-      { message: "Failed to send OTP" },
+      { success: false, error: "Failed to send OTP" },
       { status: 500 }
     );
   }

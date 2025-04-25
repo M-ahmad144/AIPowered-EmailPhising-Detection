@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
-
+import { useSearchParams } from "next/navigation";
+import axios from "axios";
 export default function OtpPage() {
   const [email, setEmail] = useState("");
   const router = useRouter();
@@ -34,16 +35,16 @@ export default function OtpPage() {
   const generateRoute = "/api/generate-otp";
   const verifyRoute = "/api/verify-otp";
 
-  useEffect(() => {
-    if (!router.isReady) return;
+  const searchParams = useSearchParams();
 
-    const queryEmail = router.query.email;
-    if (!queryEmail) {
+  useEffect(() => {
+    const emailFromParams = searchParams.get("email");
+    if (!emailFromParams) {
       router.push("/signup");
     } else {
-      setEmail(queryEmail);
+      setEmail(emailFromParams);
     }
-  }, [router.isReady]);
+  }, [searchParams]);
 
   // Countdown timer for resend button
   useEffect(() => {
@@ -60,14 +61,8 @@ export default function OtpPage() {
   const sendOtp = useCallback(async () => {
     try {
       setSending(true);
-      const response = await fetch(generateRoute, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
+      const { data } = await axios.post(generateRoute, { email });
+      console.log(data);
       if (data.success) {
         setMessage("OTP sent successfully!");
         setMessageType("success");
@@ -78,6 +73,7 @@ export default function OtpPage() {
         setMessageType("error");
       }
     } catch (error) {
+      console.error("Error sending OTP:", error);
       setMessage("Error sending OTP.");
       setMessageType("error");
     } finally {
@@ -90,35 +86,23 @@ export default function OtpPage() {
       sendOtp();
     }
   }, [email, sendOtp]);
-
   const resendOtp = async () => {
     try {
-      const res = await fetch("/api/resend-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
+      const { data } = await axios.post("/api/resend-otp", { email });
 
-      if (!res.ok) {
-        throw new Error(`HTTP error! Status: ${res.status}`);
-      }
-
-      const data = await res.json();
       setMessageType("success");
       setMessage(data.message || "Verification code sent successfully");
 
-      // Reset countdown
       setCountdown(60);
       setResendDisabled(true);
     } catch (error) {
-      console.error("Error sending OTP:", error);
+      console.error("Error resending OTP:", error);
       setMessageType("error");
-      setMessage("Failed to send verification code. Please try again.");
+      setMessage("Failed to resend verification code. Please try again.");
     } finally {
       setSending(false);
     }
   };
-
   const handleVerify = async () => {
     const otp = otpDigits.join("");
 

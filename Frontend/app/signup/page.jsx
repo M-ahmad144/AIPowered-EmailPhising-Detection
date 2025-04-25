@@ -86,11 +86,7 @@ export default function SignupPage() {
       setContextPassword(password);
       setErrorMessage("");
       setLoading(true);
-
-      // const res = await axios.post("/api/generate-otp", { email });
-      if (res.status === 200) {
-        router.push(`/otp?email=${encodeURIComponent(email)}`);
-      }
+      router.push(`/otp?email=${encodeURIComponent(email)}`);
 
       setLoading(false);
     } catch (err) {

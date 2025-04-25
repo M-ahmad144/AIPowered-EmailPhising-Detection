@@ -31,7 +31,8 @@
     "**/*.tsx",
     "app/api/generate-otp/route.js",
     "app/contexts/AuthContext.js",
-    "app/api/verify-otp/route.js"
+    "app/api/verify-otp/route.js",
+    "app/otp/page.jsx"
   ],
   "exclude": ["node_modules"]
 }
