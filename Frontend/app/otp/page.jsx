@@ -124,7 +124,7 @@ export default function OtpPage() {
       });
 
       const data = await res.json();
-
+      console.log(data);
       if (res.ok) {
         setMessageType("success");
         setMessage(data.message || "Email verified successfully!");

@@ -79,6 +79,7 @@ export default function SignupPage() {
   };
 
   const handleSignup = async (e) => {
+    console.log("Signing up...");
     e.preventDefault();
     if (!validate()) return;
 

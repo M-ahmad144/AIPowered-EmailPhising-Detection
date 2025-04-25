@@ -58,7 +58,7 @@ export async function POST(request) {
       }
 
       // OTP is valid — delete it (one-time use)
-      await Otp.findByIdAndDelete(latestOtp._id);
+      await Otp.deleteMany({ email });
     }
 
     // 🔑 Password login
