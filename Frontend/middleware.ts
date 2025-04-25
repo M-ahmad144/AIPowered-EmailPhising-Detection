@@ -55,3 +55,5 @@ function isTokenExpired(token: string): boolean {
 export const config = {
   matcher: ["/((?!api|_next/static|_next/image|static|favicon\\.ico).*)"],
 };
+
+
