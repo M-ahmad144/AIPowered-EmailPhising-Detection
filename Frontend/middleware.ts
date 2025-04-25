@@ -14,25 +14,28 @@ const PUBLIC_PATHS = [
   "/api/signout",
 ];
 
+// Middleware
 export function middleware(req: NextRequest) {
   const { pathname, origin } = req.nextUrl;
   const token = getToken(req);
-  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+  const isPublicPath = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+  const isAuthenticated = token && !isTokenExpired(token);
 
-  // Check if the user is trying to access a public path while logged in
-  if (isPublic && token && !isTokenExpired(token)) {
+  // Redirect unauthenticated users away from protected pages
+  if (!isPublicPath && !isAuthenticated) {
+    return NextResponse.redirect(`${origin}/login`);
+  }
+
+  // Redirect logged-in users away from auth pages
+  if (isAuthenticated && ["/login", "/signup"].includes(pathname)) {
     return NextResponse.redirect(`${origin}/`);
   }
 
-  const allowedPages = ["/login", "/signup", "/"];
-  if (!allowedPages.some((page) => pathname.startsWith(page))) {
-    const notFoundUrl = new URL("/404", origin);
-    return NextResponse.redirect(notFoundUrl);
-  }
-
+  // Allow access if authenticated or on public path
   return NextResponse.next();
 }
 
+// Extract token from cookie or header
 function getToken(req: NextRequest): string | null {
   return (
     req.cookies.get("token")?.value ??
@@ -41,6 +44,7 @@ function getToken(req: NextRequest): string | null {
   );
 }
 
+// Check JWT expiration
 function isTokenExpired(token: string): boolean {
   try {
     const payload = JSON.parse(
@@ -48,10 +52,11 @@ function isTokenExpired(token: string): boolean {
     );
     return payload.exp < Date.now() / 1000;
   } catch {
-    return true;
+    return true; // If anything goes wrong, assume it's expired
   }
 }
 
+// Apply middleware to all routes except Next.js static assets
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|static|favicon\\.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon\\.ico).*)"],
 };

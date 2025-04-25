@@ -42,10 +42,20 @@ export default function Home() {
 
   const handleSignOut = async () => {
     try {
-      await fetch("/api/signout", { method: "POST" });
+      console.log("Signing out...");
+      const res = await fetch("/api/signout", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to sign out");
+      }
+
       router.push("/login");
     } catch (err) {
-      console.error(err);
+      console.error("Error during sign out:", err);
+      // Optional: show a toast or alert to the user
     }
   };
 

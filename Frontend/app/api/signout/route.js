@@ -1,12 +1,22 @@
 import { NextResponse } from "next/server";
 
-export const POST = async (req) => {
-    try {
-        const res = NextResponse.json({message: 'User Logged Out Successfully!'}, {status: 200});
-        res.cookies.set('token', '', {httpOnly: true, expires: new Date(0)});
-        return res
-    } catch (err) {
-        console.log(err);
-        return NextResponse.error();
+export const POST = async () => {
+  const response = new NextResponse(
+    JSON.stringify({ message: "Logged out successfully" }),
+    {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+      },
     }
-}
+  );
+
+  response.cookies.set("token", "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    expires: new Date(0),
+  });
+
+  return response;
+};
