@@ -5,6 +5,7 @@ const PUBLIC_PATHS = [
   "/login",
   "/signup",
   "/login-otp",
+  "/otp",
   "/api/login",
   "/api/generate-otp",
   "/api/resend-otp",
@@ -60,5 +61,3 @@ function isTokenExpired(token: string): boolean {
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon\\.ico).*)"],
 };
-
-
