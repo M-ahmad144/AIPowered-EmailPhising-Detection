@@ -26,10 +26,7 @@ export default function LoginPage() {
       setErrorMessage("");
       setLoading(true);
 
-      const res = await axios.post("/api/login", user);
-      if (res.status === 200) {
-        router.push("/");
-      }
+      router.push("/login-otp?email=" + encodeURIComponent(user.email));
 
       setLoading(false);
     } catch (err) {

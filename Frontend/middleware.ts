@@ -1,31 +1,56 @@
+// middleware.ts
 import { NextResponse } from "next/server";
-import { NextRequest } from "next/server";
-import { jwtDecode } from "jwt-decode";
+import type { NextRequest } from "next/server";
+
+const PUBLIC_PATHS = [
+  "/login",
+  "/signup",
+  "/login-otp",
+  "/api/login",
+  "/api/generate-otp",
+  "/api/resend-otp",
+  "/api/verify-login",
+  "/favicon.ico",
+];
 
 export function middleware(req: NextRequest) {
-  const path = req.nextUrl.pathname;
-  const isPublicPath = path === "/login" || path === "/signup";
-  const token = req.cookies.get("token")?.value || "";
+  const { pathname, origin } = req.nextUrl;
+  const token = getToken(req);
+  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 
-  if (!isPublicPath && !token) {
-    return NextResponse.redirect(new URL("/login", req.url));
-  } else if (isPublicPath && token && !isTokenExpired(token)) {
-    return NextResponse.redirect(new URL("/", req.url));
+  if (isPublic && token && !isTokenExpired(token)) {
+    return NextResponse.redirect(`${origin}/`);
+  }
+
+  if (!isPublic && (!token || isTokenExpired(token))) {
+    const loginUrl = req.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.search = `p=${encodeURIComponent(pathname)}`;
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();
 }
 
-const isTokenExpired = (token: string): boolean => {
+function getToken(req: NextRequest): string | null {
+  return (
+    req.cookies.get("token")?.value ??
+    req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ??
+    null
+  );
+}
+
+function isTokenExpired(token: string): boolean {
   try {
-    if (!token) return true;
-    const decodedToken: any = jwtDecode(token);
-    return decodedToken.exp < Date.now() / 1000;
-  } catch (err) {
+    const payload = JSON.parse(
+      Buffer.from(token.split(".")[1], "base64").toString("utf-8")
+    );
+    return payload.exp < Date.now() / 1000;
+  } catch {
     return true;
   }
-};
+}
 
 export const config = {
-  matcher: ["/", "/login", "/signup"],
+  matcher: ["/((?!api|_next/static|_next/image|static|favicon\\.ico).*)"],
 };
