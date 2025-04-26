@@ -26,6 +26,8 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [result, setResult] = useState(null);
+
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -38,6 +40,43 @@ export default function Home() {
       setEmail("");
       setEmailBody("");
     }, 1500);
+  };
+
+  const handleSubmitEmail = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+  
+    try {
+      const response = await fetch('http://127.0.0.1:5000/api/predict', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          body: emailBody,
+        }),
+      });
+  
+      if (!response.ok) {
+        throw new Error('Analysis failed');
+      }
+  
+      const result = await response.json();
+      setResult(result);
+      
+      // Handle the result - you might want to store it in state or navigate to a results page
+      console.log('Analysis result:', result);
+      
+      
+    } catch (error) {
+      console.error('Error during analysis:', error);
+    }
+     finally {
+      setIsLoading(false);
+      setEmail('');
+      setEmailBody('');
+    }
   };
 
   const handleSignOut = async () => {
@@ -246,6 +285,7 @@ export default function Home() {
                       type="submit"
                       className="bg-gradient-to-r from-blue-600 hover:from-blue-700 to-cyan-600 hover:to-cyan-700 w-full h-12 text-base transition-all duration-300"
                       disabled={isLoading}
+                      onClick={handleSubmitEmail}
                     >
                       {isLoading ? (
                         <motion.div
@@ -266,6 +306,31 @@ export default function Home() {
                 </form>
               </CardContent>
             </Card>
+            {result && (
+  <div className="mt-6 p-4 border rounded-lg bg-gray-50">
+    <h3 className="text-lg font-semibold text-gray-800 mb-2">Analysis Result</h3>
+    <p>
+  <strong>Prediction:</strong>{" "}
+  <span className="text-blue-600">
+    {result.prediction === "phishing" ? "Phishing Email" : "Not Phishing"}
+  </span>
+</p>
+
+    <p><strong>Email Check:</strong> {result.email_check}</p>
+    <p><strong>Confidence:</strong> {(result.confidence * 100).toFixed(2)}%</p>
+    <div className="mt-2">
+      <h4 className="font-medium">All Probabilities:</h4>
+      <ul className="text-sm list-disc pl-5">
+        {Object.entries(result.all_probabilities).map(([key, value]) => (
+          <li key={key}>
+            {key}: {(value * 100).toFixed(6)}%
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+)}
+
           </motion.div>
 
           <motion.div

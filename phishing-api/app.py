@@ -1,12 +1,11 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS  # ✅ Import CORS
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 import re
 
 app = Flask(__name__)
-
-
-
+CORS(app)  # ✅ Enable CORS for all routes and origins
 
 # Load model and tokenizer once
 tokenizer = AutoTokenizer.from_pretrained("cybersectony/phishing-email-detection-distilbert_v2.4.1")
