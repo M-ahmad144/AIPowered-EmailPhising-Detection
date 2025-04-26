@@ -27,15 +27,15 @@ export default function Home() {
   const [emailBody, setEmailBody] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const [user, setUser] = useState();
+  const [userInfo, setUser] = useState();
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch("/api/me", { credentials: "include" }); // ⬅️ with cookies
-        const data = await res.json(); // ⬅️ parse the response body
+        const res = await fetch("/api/me", { credentials: "include" });
+        const data = await res.json();
 
         if (data.success) {
-          setUser(data.user); // ⬅️ set user if successful
+          setUser(data.user);
         } else {
           console.error("User fetch error:", data.error); // ⬅️ otherwise log error
         }
@@ -364,7 +364,7 @@ export default function Home() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.3 }}
           >
-            {user?.role === "admin" && (
+            {userInfo?.role === "admin" && (
               <motion.div
                 whileHover={{ scale: 1.05, y: -5 }}
                 whileTap={{ scale: 0.95 }}

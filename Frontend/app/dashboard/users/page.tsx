@@ -49,12 +49,6 @@ export default function UsersPage() {
 
   return (
     <DashboardShell>
-      <DashboardHeader heading="Users" text="Manage your users">
-        <Button onClick={() => setIsAddUserOpen(true)}>
-          <PlusCircle className="mr-2 w-4 h-4" />
-          Add User
-        </Button>
-      </DashboardHeader>
       <UsersTable
         users={users}
         onEdit={openEditDialog}
