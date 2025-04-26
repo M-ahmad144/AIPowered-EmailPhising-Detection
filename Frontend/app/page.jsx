@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Send,
@@ -27,6 +27,25 @@ export default function Home() {
   const [emailBody, setEmailBody] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [user, setUser] = useState();
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch("/api/me", { credentials: "include" }); // ⬅️ with cookies
+        const data = await res.json(); // ⬅️ parse the response body
+
+        if (data.success) {
+          setUser(data.user); // ⬅️ set user if successful
+        } else {
+          console.error("User fetch error:", data.error); // ⬅️ otherwise log error
+        }
+      } catch (error) {
+        console.error("Error fetching user:", error); // ⬅️ catch network errors
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -345,27 +364,30 @@ export default function Home() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.3 }}
           >
-            <motion.div
-              whileHover={{ scale: 1.05, y: -5 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button
-                variant="outline"
-                onClick={() => router.push("/dashboard")}
-                className="group bg-white/80 hover:bg-blue-50 shadow-sm backdrop-blur-sm border border-gray-200 hover:border-blue-200 w-full h-16 transition-all duration-300"
+            {user?.role === "admin" && (
+              <motion.div
+                whileHover={{ scale: 1.05, y: -5 }}
+                whileTap={{ scale: 0.95 }}
               >
-                <div className="flex justify-between items-center w-full">
-                  <div className="flex items-center">
-                    <div className="bg-blue-100 mr-3 p-2 rounded-full">
-                      <Lock className="w-5 h-5 text-blue-600" />
+                <Button
+                  variant="outline"
+                  onClick={() => router.push("/dashboard")}
+                  className="group bg-white/80 hover:bg-blue-50 shadow-sm backdrop-blur-sm border border-gray-200 hover:border-blue-200 w-full h-16 transition-all duration-300"
+                >
+                  <div className="flex justify-between items-center w-full">
+                    <div className="flex items-center">
+                      <div className="bg-blue-100 mr-3 p-2 rounded-full">
+                        <Lock className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <span>Dashboard</span>
                     </div>
-                    <span>Dashboard</span>
+                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-all group-hover:translate-x-1" />
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-all group-hover:translate-x-1" />
-                </div>
-              </Button>
-            </motion.div>
+                </Button>
+              </motion.div>
+            )}
 
+            {/* Scan Email */}
             <motion.div
               whileHover={{ scale: 1.05, y: -5 }}
               whileTap={{ scale: 0.95 }}
@@ -386,7 +408,7 @@ export default function Home() {
                 </div>
               </Button>
             </motion.div>
-
+            {/* Threat Activity */}
             <motion.div
               whileHover={{ scale: 1.05, y: -5 }}
               whileTap={{ scale: 0.95 }}

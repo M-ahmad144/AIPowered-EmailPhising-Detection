@@ -5,10 +5,8 @@ import User from "@/models/userModel";
 
 export async function GET(request) {
   try {
-    // 1. Ensure DB is connected
     await connect();
 
-    // 2. Read token from cookies
     const token = request.cookies.get("token")?.value;
     if (!token) {
       return NextResponse.json(
@@ -17,7 +15,6 @@ export async function GET(request) {
       );
     }
 
-    // 3. Verify & decode token
     let decoded;
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
@@ -28,7 +25,6 @@ export async function GET(request) {
       );
     }
 
-    // 4. Fetch user (exclude password)
     const user = await User.findById(decoded.id).select("-password");
     if (!user) {
       return NextResponse.json(
@@ -37,7 +33,6 @@ export async function GET(request) {
       );
     }
 
-    // 5. Return user object
     return NextResponse.json({ success: true, user }, { status: 200 });
   } catch (err) {
     console.error("GET /api/me error:", err);
