@@ -32,7 +32,9 @@
     "app/api/generate-otp/route.js",
     "app/contexts/AuthContext.js",
     "app/api/verify-otp/route.js",
-    "app/otp/page.jsx"
+    "app/otp/page.jsx",
+    "app/api/admin/users/all/route.js",
+    "app/api/admin/users/recent/route.js"
   ],
   "exclude": ["node_modules"]
 }

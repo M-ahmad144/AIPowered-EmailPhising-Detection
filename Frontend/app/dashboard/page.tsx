@@ -1,14 +1,54 @@
-import { DashboardHeader } from "@/components/dashboard/dashboard-header"
-import { DashboardShell } from "@/components/dashboard/dashboard-shell"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Overview } from "@/components/dashboard/overview"
-import { RecentUsers } from "@/components/dashboard/recent-users"
+"use client";
+import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Overview } from "@/components/dashboard/overview";
+import { RecentUsers } from "@/components/dashboard/recent-users";
+import useSWR from "swr";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
+  const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+  const { data: totalUsersData, isLoading: isLoadingTotalUsers } = useSWR(
+    "/api/admin/dashboard?type=total-users",
+    fetcher
+  );
+
+  const { data: newSignupsData, isLoading: isLoadingNewSignups } = useSWR(
+    "/api/admin/dashboard?type=new-signups",
+    fetcher
+  );
+
+  const { data: adminUsersData, isLoading: isLoadingAdminUsers } = useSWR(
+    "/api/admin/dashboard?type=admin-users",
+    fetcher
+  );
+
+  const { data: userActivityData, isLoading: isLoadingUserActivity } = useSWR(
+    "/api/admin/dashboard?type=user-activity",
+    fetcher
+  );
+
+  // Transform user activity data for the chart
+  const chartData =
+    userActivityData?.userActivity?.map((item) => ({
+      name: item.date,
+      total: item.count,
+    })) || [];
+
   return (
     <DashboardShell>
       <DashboardHeader heading="Dashboard" text="Overview of your system" />
-      <div className="gap-4 grid md:grid-cols-2 lg:grid-cols-4">
+
+      {/* Stats Cards Grid */}
+      <div className="gap-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row justify-between items-center space-y-0 pb-2">
             <CardTitle className="font-medium text-sm">Total Users</CardTitle>
@@ -29,31 +69,16 @@ export default function DashboardPage() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="font-bold text-2xl">245</div>
-            <p className="text-muted-foreground text-xs">+12% from last month</p>
+            {isLoadingTotalUsers ? (
+              <Skeleton className="w-20 h-8" />
+            ) : (
+              <div className="font-bold text-2xl">
+                {totalUsersData?.totalUsers || 0}
+              </div>
+            )}
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row justify-between items-center space-y-0 pb-2">
-            <CardTitle className="font-medium text-sm">Active Users</CardTitle>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              className="w-4 h-4 text-muted-foreground"
-            >
-              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-            </svg>
-          </CardHeader>
-          <CardContent>
-            <div className="font-bold text-2xl">189</div>
-            <p className="text-muted-foreground text-xs">+5.2% from last week</p>
-          </CardContent>
-        </Card>
+
         <Card>
           <CardHeader className="flex flex-row justify-between items-center space-y-0 pb-2">
             <CardTitle className="font-medium text-sm">New Signups</CardTitle>
@@ -72,10 +97,21 @@ export default function DashboardPage() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="font-bold text-2xl">32</div>
-            <p className="text-muted-foreground text-xs">+19% from last month</p>
+            {isLoadingNewSignups ? (
+              <div>
+                <Skeleton className="mb-1 w-20 h-8" />
+                <Skeleton className="w-24 h-4" />
+              </div>
+            ) : (
+              <>
+                <div className="font-bold text-2xl">
+                  {newSignupsData?.newSignups || 0}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader className="flex flex-row justify-between items-center space-y-0 pb-2">
             <CardTitle className="font-medium text-sm">Admin Users</CardTitle>
@@ -87,31 +123,51 @@ export default function DashboardPage() {
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth="2"
-              className="w-4 h-4 text-muted-foreground"
+              className="w-4 h-4 text-admin-foreground"
             >
-              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+              <path
+                d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"
+                fill="#FFC107"
+              />
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="font-bold text-2xl">8</div>
-            <p className="text-muted-foreground text-xs">No change</p>
+            {isLoadingAdminUsers ? (
+              <Skeleton className="w-20 h-8" />
+            ) : (
+              <div className="font-bold text-2xl">
+                {adminUsersData?.adminUsers || 0}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
-      <div className="gap-4 grid md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
+
+      {/* Charts Grid */}
+      <div className="gap-4 grid grid-cols-1 lg:grid-cols-7 mt-4">
+        <Card className="lg:col-span-4">
           <CardHeader>
             <CardTitle>User Activity</CardTitle>
-            <CardDescription>User activity over the past 30 days</CardDescription>
+            <CardDescription>
+              User activity over the past 30 days
+            </CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
-            <Overview />
+            {isLoadingUserActivity ? (
+              <div className="flex justify-center items-center w-full h-80">
+                <Skeleton className="w-full h-64" />
+              </div>
+            ) : (
+              <Overview data={chartData} />
+            )}
           </CardContent>
         </Card>
-        <Card className="col-span-3">
+        <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>Recent Users</CardTitle>
-            <CardDescription>Recently added users to the system</CardDescription>
+            <CardDescription>
+              Recently added users to the system
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <RecentUsers />
@@ -119,5 +175,5 @@ export default function DashboardPage() {
         </Card>
       </div>
     </DashboardShell>
-  )
+  );
 }

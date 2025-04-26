@@ -1,63 +1,60 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+"use client";
+
+import useSWR from "swr";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export function RecentUsers() {
+  // Use the correct endpoint for fetching recent users
+  const { data, error, isLoading } = useSWR("/api/admin/users/recent", fetcher);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="flex items-center space-x-4">
+            <Skeleton className="rounded-full w-9 h-9" />
+            <div className="space-y-2">
+              <Skeleton className="w-[150px] h-4" />
+              <Skeleton className="w-[100px] h-4" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (error)
+    return <p className="text-red-500">Failed to load recent users.</p>;
+
+  const recentUsers = data?.users || [];
+
   return (
     <div className="space-y-8">
-      <div className="flex items-center">
-        <Avatar className="h-9 w-9">
-          <AvatarImage src="/placeholder-user.jpg" alt="Avatar" />
-          <AvatarFallback>JD</AvatarFallback>
-        </Avatar>
-        <div className="ml-4 space-y-1">
-          <p className="text-sm font-medium leading-none">John Doe</p>
-          <p className="text-sm text-muted-foreground">john.doe@example.com</p>
-        </div>
-        <div className="ml-auto font-medium">Admin</div>
-      </div>
-      <div className="flex items-center">
-        <Avatar className="h-9 w-9">
-          <AvatarImage src="/placeholder-user.jpg" alt="Avatar" />
-          <AvatarFallback>JS</AvatarFallback>
-        </Avatar>
-        <div className="ml-4 space-y-1">
-          <p className="text-sm font-medium leading-none">Jane Smith</p>
-          <p className="text-sm text-muted-foreground">jane.smith@example.com</p>
-        </div>
-        <div className="ml-auto font-medium">User</div>
-      </div>
-      <div className="flex items-center">
-        <Avatar className="h-9 w-9">
-          <AvatarImage src="/placeholder-user.jpg" alt="Avatar" />
-          <AvatarFallback>RJ</AvatarFallback>
-        </Avatar>
-        <div className="ml-4 space-y-1">
-          <p className="text-sm font-medium leading-none">Robert Johnson</p>
-          <p className="text-sm text-muted-foreground">robert.johnson@example.com</p>
-        </div>
-        <div className="ml-auto font-medium">Editor</div>
-      </div>
-      <div className="flex items-center">
-        <Avatar className="h-9 w-9">
-          <AvatarImage src="/placeholder-user.jpg" alt="Avatar" />
-          <AvatarFallback>SW</AvatarFallback>
-        </Avatar>
-        <div className="ml-4 space-y-1">
-          <p className="text-sm font-medium leading-none">Sarah Williams</p>
-          <p className="text-sm text-muted-foreground">sarah.williams@example.com</p>
-        </div>
-        <div className="ml-auto font-medium">User</div>
-      </div>
-      <div className="flex items-center">
-        <Avatar className="h-9 w-9">
-          <AvatarImage src="/placeholder-user.jpg" alt="Avatar" />
-          <AvatarFallback>MB</AvatarFallback>
-        </Avatar>
-        <div className="ml-4 space-y-1">
-          <p className="text-sm font-medium leading-none">Michael Brown</p>
-          <p className="text-sm text-muted-foreground">michael.brown@example.com</p>
-        </div>
-        <div className="ml-auto font-medium">Admin</div>
-      </div>
+      {recentUsers.map((user: any) => {
+        const name = user.email.split("@")[0];
+        const fallback = name
+          .split(" ")
+          .map((n: string) => n[0])
+          .join("")
+          .toUpperCase();
+
+        return (
+          <div key={user._id} className="flex items-center">
+            <Avatar className="w-9 h-9">
+              <AvatarImage src="/placeholder-user.jpg" alt={name} />
+              <AvatarFallback>{fallback}</AvatarFallback>
+            </Avatar>
+            <div className="space-y-1 ml-4">
+              <p className="font-medium text-sm leading-none">{name}</p>
+              <p className="text-muted-foreground text-sm">{user.email}</p>
+            </div>
+            <div className="ml-auto font-medium capitalize">{user.role}</div>
+          </div>
+        );
+      })}
     </div>
-  )
+  );
 }

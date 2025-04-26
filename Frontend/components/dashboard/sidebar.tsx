@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
-import { LayoutDashboard, Users, Settings, HelpCircle } from "lucide-react"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { LayoutDashboard, Users, Settings, HelpCircle } from "lucide-react";
 
 const sidebarItems = [
   {
@@ -16,26 +16,18 @@ const sidebarItems = [
     href: "/dashboard/users",
     icon: Users,
   },
-  {
-    title: "Settings",
-    href: "/dashboard/settings",
-    icon: Settings,
-  },
-  {
-    title: "Help",
-    href: "/dashboard/help",
-    icon: HelpCircle,
-  },
-]
+];
 
 export function Sidebar() {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   return (
-    <div className="hidden border-r bg-background md:block md:w-64">
+    <div className="hidden md:block bg-background border-r md:w-64">
       <div className="space-y-4 py-4">
         <div className="px-4 py-2">
-          <h2 className="mb-2 px-2 text-lg font-semibold tracking-tight">Navigation</h2>
+          <h2 className="mb-2 px-2 font-semibold text-lg tracking-tight">
+            Navigation
+          </h2>
           <div className="space-y-1">
             {sidebarItems.map((item) => (
               <Link
@@ -43,10 +35,12 @@ export function Sidebar() {
                 href={item.href}
                 className={cn(
                   "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-                  pathname === item.href ? "bg-accent text-accent-foreground" : "transparent",
+                  pathname === item.href
+                    ? "bg-accent text-accent-foreground"
+                    : "transparent"
                 )}
               >
-                <item.icon className="mr-2 h-4 w-4" />
+                <item.icon className="mr-2 w-4 h-4" />
                 <span>{item.title}</span>
               </Link>
             ))}
@@ -54,5 +48,5 @@ export function Sidebar() {
         </div>
       </div>
     </div>
-  )
+  );
 }
