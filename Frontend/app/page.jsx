@@ -29,26 +29,29 @@ export default function Home() {
   const [emailBody, setEmailBody] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState(null);
-<<<<<<< Updated upstream
   const [userInfo, setUser] = useState();
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const res = await fetch("/api/me", { credentials: "include" });
-        const data = await res.json();
 
-        if (data.success) {
-          setUser(data.user);
-        } else {
-          console.error("User fetch error:", data.error); // ⬅️ otherwise log error
+      useEffect(() => {
+      const fetchUser = async () => {
+        try {
+          const res = await fetch("/api/me", { credentials: "include" });
+          const data = await res.json();
+    
+          if (data.success) {
+            setUser(data.user);
+          } else {
+            console.error("User fetch error:", data.error);
+          }
+        } catch (error) {
+          console.error("Error fetching user:", error);
         }
-      } catch (error) {
-        console.error("Error fetching user:", error); // ⬅️ catch network errors
-      }
-    };
+      };
+    
+      fetchUser();
+    }, []);  // Empty dependency array means this runs once on mount
 
     fetchUser();
-=======
+
   const router = useRouter(); // initialize router
 
   useEffect(() => {
@@ -62,7 +65,6 @@ export default function Home() {
       }
     };
     fetchPublicKey();
->>>>>>> Stashed changes
   }, []);
 
   const encryptData = (data) => {
@@ -93,23 +95,23 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-<<<<<<< Updated upstream
-      const response = await fetch("http://127.0.0.1:5000/api/predict", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          body: emailBody,
-        }),
-      });
 
-=======
-      const encryptedData = encryptData({
-        email,
-        body: emailBody
-      });
+      // const response = await fetch("http://127.0.0.1:5000/api/predict", {
+      //   method: "POST",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //   },
+      //   body: JSON.stringify({
+      //     email,
+      //     body: emailBody,
+      //   }),
+      // });
+
+
+      // const encryptedData = encryptData({
+      //   email,
+      //   body: emailBody
+      // });
 
       const response = await fetch('http://127.0.0.1:5000/api/predict', {
         method: "POST",
@@ -119,24 +121,23 @@ export default function Home() {
         body: JSON.stringify({ encrypted: encryptedData }),
       });
 
->>>>>>> Stashed changes
       if (!response.ok) {
         throw new Error("Analysis failed");
       }
 
       const result = await response.json();
       setResult(result);
-<<<<<<< Updated upstream
+
 
       // Handle the result - you might want to store it in state or navigate to a results page
       console.log("Analysis result:", result);
     } catch (error) {
       console.error("Error during analysis:", error);
-=======
-    } catch (error) {
-      console.error("Error during analysis:", error);
-      alert("Something went wrong during analysis.");
->>>>>>> Stashed changes
+// =======
+//     } catch (error) {
+//       console.error("Error during analysis:", error);
+//       alert("Something went wrong during analysis.");
+// >>>>>>> Stashed changes
     } finally {
       setIsLoading(false);
       setEmail("");
@@ -501,3 +502,5 @@ export default function Home() {
     </div>
   );
 }
+  
+  
