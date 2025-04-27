@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Send,
@@ -21,53 +21,75 @@ import {
 } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import forge from "node-forge";
-import { useEffect } from "react";
 
-export default function Home() {
+export default function EmailAnalysis() {
   const [publicKey, setPublicKey] = useState(null);
   const [email, setEmail] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const [userInfo, setUser] = useState();
+  const [userInfo, setUser] = useState(null);
+  const router = useRouter();
 
-      useEffect(() => {
-      const fetchUser = async () => {
-        try {
-          const res = await fetch("/api/me", { credentials: "include" });
-          const data = await res.json();
-    
-          if (data.success) {
-            setUser(data.user);
-          } else {
-            console.error("User fetch error:", data.error);
-          }
-        } catch (error) {
-          console.error("Error fetching user:", error);
+  // Fetch user data
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch("/api/me", { 
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
         }
-      };
-    
-      fetchUser();
-    }, []);  // Empty dependency array means this runs once on mount
+
+        const data = await res.json();
+        
+        if (data.success) {
+          setUser(data.user);
+        } else {
+          console.error("User fetch error:", data.error);
+          router.push("/login");
+        }
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        router.push("/login");
+      }
+    };
 
     fetchUser();
+  }, [router]);
 
-  const router = useRouter(); // initialize router
-
+  // Fetch public key
   useEffect(() => {
     const fetchPublicKey = async () => {
       try {
         const res = await fetch('http://127.0.0.1:5000/api/public_key');
+        
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
         const data = await res.json();
         setPublicKey(data.public_key);
       } catch (err) {
         console.error('Failed to fetch public key:', err);
+        alert("Failed to load security keys. Please refresh the page.");
       }
     };
+
     fetchPublicKey();
   }, []);
 
+  // Encryption function
   const encryptData = (data) => {
+    if (!publicKey) {
+      throw new Error("Public key not available");
+    }
+
     try {
       const publicKeyObj = forge.pki.publicKeyFromPem(publicKey);
       const encrypted = publicKeyObj.encrypt(
@@ -81,37 +103,32 @@ export default function Home() {
       return forge.util.encode64(encrypted);
     } catch (err) {
       console.error("Encryption error:", err);
-      throw err;
+      throw new Error("Failed to encrypt data");
     }
   };
 
+  // Form submission handler
   const handleSubmitEmail = async (e) => {
     e.preventDefault();
+    
     if (!email || !emailBody) {
       alert("Please enter both email and email body!");
       return;
     }
     
+    // Validate email format
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      alert("Please enter a valid email address");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-
-      // const response = await fetch("http://127.0.0.1:5000/api/predict", {
-      //   method: "POST",
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //   },
-      //   body: JSON.stringify({
-      //     email,
-      //     body: emailBody,
-      //   }),
-      // });
-
-
-      // const encryptedData = encryptData({
-      //   email,
-      //   body: emailBody
-      // });
+      const encryptedData = encryptData({
+        email,
+        body: emailBody
+      });
 
       const response = await fetch('http://127.0.0.1:5000/api/predict', {
         method: "POST",
@@ -122,32 +139,23 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error("Analysis failed");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Analysis failed");
       }
 
-      const result = await response.json();
-      setResult(result);
+      const resultData = await response.json();
+      setResult(resultData);
 
-
-      // Handle the result - you might want to store it in state or navigate to a results page
-      console.log("Analysis result:", result);
     } catch (error) {
       console.error("Error during analysis:", error);
-// =======
-//     } catch (error) {
-//       console.error("Error during analysis:", error);
-//       alert("Something went wrong during analysis.");
-// >>>>>>> Stashed changes
+      alert(error.message || "Something went wrong during analysis.");
     } finally {
       setIsLoading(false);
-      setEmail("");
-      setEmailBody("");
     }
   };
 
   const handleSignOut = async () => {
     try {
-      console.log("Signing out...");
       const res = await fetch("/api/signout", {
         method: "POST",
         credentials: "include",
@@ -163,6 +171,7 @@ export default function Home() {
       alert("Error during sign out.");
     }
   };
+
   return (
     <div className="relative flex flex-col bg-gradient-to-b from-white to-gray-50 min-h-screen overflow-hidden">
       {/* SVG Background Elements */}
@@ -204,26 +213,6 @@ export default function Home() {
             <path
               fill="#3B82F6"
               d="M45.3,-51.2C58.3,-40.5,68.3,-25.1,70.3,-8.7C72.3,7.8,66.4,25.2,55.3,37.1C44.2,49,27.9,55.3,10.8,59.9C-6.3,64.5,-24.2,67.3,-39.2,60.6C-54.2,53.9,-66.3,37.7,-70.6,19.9C-74.9,2.1,-71.4,-17.3,-61.3,-31.2C-51.2,-45.1,-34.5,-53.5,-18.4,-58.8C-2.3,-64.1,13.2,-66.3,28.1,-62.1C43,-57.9,57.3,-47.3,45.3,-51.2Z"
-              transform="translate(100 100)"
-            />
-          </svg>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 0.05, scale: 1 }}
-          transition={{
-            duration: 2.5,
-            repeat: Number.POSITIVE_INFINITY,
-            repeatType: "reverse",
-            delay: 0.5,
-          }}
-          className="bottom-[10%] left-[5%] absolute w-[500px] h-[500px]"
-        >
-          <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-            <path
-              fill="#10B981"
-              d="M47.7,-57.2C59.5,-45.7,65.8,-28.5,68.8,-10.8C71.8,6.9,71.6,25.1,62.8,37.8C54.1,50.5,36.8,57.7,19.2,63.4C1.6,69.2,-16.3,73.4,-32.1,68.5C-47.9,63.5,-61.6,49.3,-67.3,32.8C-73,16.3,-70.7,-2.5,-64.1,-18.9C-57.6,-35.3,-46.8,-49.2,-33.5,-60.2C-20.2,-71.2,-4.4,-79.3,9.7,-77.9C23.8,-76.5,35.9,-68.7,47.7,-57.2Z"
               transform="translate(100 100)"
             />
           </svg>
@@ -296,7 +285,7 @@ export default function Home() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form  className="space-y-6">
+                <form onSubmit={handleSubmitEmail} className="space-y-6">
                   <motion.div
                     className="space-y-2"
                     whileHover={{ scale: 1.01 }}
@@ -350,7 +339,6 @@ export default function Home() {
                       type="submit"
                       className="bg-gradient-to-r from-blue-600 hover:from-blue-700 to-cyan-600 hover:to-cyan-700 w-full h-12 text-base transition-all duration-300"
                       disabled={isLoading}
-                      onClick={handleSubmitEmail}
                     >
                       {isLoading ? (
                         <motion.div
@@ -371,6 +359,7 @@ export default function Home() {
                 </form>
               </CardContent>
             </Card>
+
             {result && (
               <div className="bg-gray-50 mt-6 p-4 border rounded-lg">
                 <h3 className="mb-2 font-semibold text-gray-800 text-lg">
@@ -384,7 +373,6 @@ export default function Home() {
                       : "Not Phishing"}
                   </span>
                 </p>
-
                 <p>
                   <strong>Email Check:</strong> {result.email_check}
                 </p>
@@ -408,13 +396,13 @@ export default function Home() {
             )}
           </motion.div>
 
-          <motion.div
-            className="gap-4 grid grid-cols-1 md:grid-cols-3 mt-10"
-            initial={{ y: 40, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-          >
-            {userInfo?.role === "admin" && (
+          {userInfo?.role === "admin" && (
+            <motion.div
+              className="gap-4 grid grid-cols-1 md:grid-cols-3 mt-10"
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
               <motion.div
                 whileHover={{ scale: 1.05, y: -5 }}
                 whileTap={{ scale: 0.95 }}
@@ -435,51 +423,8 @@ export default function Home() {
                   </div>
                 </Button>
               </motion.div>
-            )}
-
-            {/* Scan Email */}
-            <motion.div
-              whileHover={{ scale: 1.05, y: -5 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button
-                variant="outline"
-                onClick={() => router.push("/scan")}
-                className="group bg-white/80 hover:bg-green-50 shadow-sm backdrop-blur-sm border border-gray-200 hover:border-green-200 w-full h-16 transition-all duration-300"
-              >
-                <div className="flex justify-between items-center w-full">
-                  <div className="flex items-center">
-                    <div className="bg-green-100 mr-3 p-2 rounded-full">
-                      <Send className="w-5 h-5 text-green-600" />
-                    </div>
-                    <span>Scan Emails</span>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-green-500 transition-all group-hover:translate-x-1" />
-                </div>
-              </Button>
             </motion.div>
-            {/* Threat Activity */}
-            <motion.div
-              whileHover={{ scale: 1.05, y: -5 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button
-                variant="outline"
-                onClick={() => router.push("/threats")}
-                className="group bg-white/80 hover:bg-red-50 shadow-sm backdrop-blur-sm border border-gray-200 hover:border-red-200 w-full h-16 transition-all duration-300"
-              >
-                <div className="flex justify-between items-center w-full">
-                  <div className="flex items-center">
-                    <div className="bg-red-100 mr-3 p-2 rounded-full">
-                      <AlertTriangle className="w-5 h-5 text-red-600" />
-                    </div>
-                    <span>Threat Activity</span>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-red-500 transition-all group-hover:translate-x-1" />
-                </div>
-              </Button>
-            </motion.div>
-          </motion.div>
+          )}
         </div>
       </main>
 
@@ -502,5 +447,3 @@ export default function Home() {
     </div>
   );
 }
-  
-  
