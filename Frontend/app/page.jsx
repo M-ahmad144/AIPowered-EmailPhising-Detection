@@ -20,13 +20,16 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { motion } from "framer-motion";
+import forge from "node-forge";
+import { useEffect } from "react";
 
 export default function Home() {
-  const router = useRouter();
+  const [publicKey, setPublicKey] = useState(null);
   const [email, setEmail] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState(null);
+<<<<<<< Updated upstream
   const [userInfo, setUser] = useState();
   useEffect(() => {
     const fetchUser = async () => {
@@ -45,26 +48,52 @@ export default function Home() {
     };
 
     fetchUser();
+=======
+  const router = useRouter(); // initialize router
+
+  useEffect(() => {
+    const fetchPublicKey = async () => {
+      try {
+        const res = await fetch('http://127.0.0.1:5000/api/public_key');
+        const data = await res.json();
+        setPublicKey(data.public_key);
+      } catch (err) {
+        console.error('Failed to fetch public key:', err);
+      }
+    };
+    fetchPublicKey();
+>>>>>>> Stashed changes
   }, []);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    // Simulate loading
-    setTimeout(() => {
-      console.log({ email, emailBody });
-      setIsLoading(false);
-      setEmail("");
-      setEmailBody("");
-    }, 1500);
+  const encryptData = (data) => {
+    try {
+      const publicKeyObj = forge.pki.publicKeyFromPem(publicKey);
+      const encrypted = publicKeyObj.encrypt(
+        JSON.stringify(data),
+        "RSA-OAEP", 
+        {
+          md: forge.md.sha256.create(),
+          mgf1: forge.mgf.mgf1.create(forge.md.sha256.create())
+        }
+      );
+      return forge.util.encode64(encrypted);
+    } catch (err) {
+      console.error("Encryption error:", err);
+      throw err;
+    }
   };
 
   const handleSubmitEmail = async (e) => {
     e.preventDefault();
+    if (!email || !emailBody) {
+      alert("Please enter both email and email body!");
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
+<<<<<<< Updated upstream
       const response = await fetch("http://127.0.0.1:5000/api/predict", {
         method: "POST",
         headers: {
@@ -76,17 +105,38 @@ export default function Home() {
         }),
       });
 
+=======
+      const encryptedData = encryptData({
+        email,
+        body: emailBody
+      });
+
+      const response = await fetch('http://127.0.0.1:5000/api/predict', {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ encrypted: encryptedData }),
+      });
+
+>>>>>>> Stashed changes
       if (!response.ok) {
         throw new Error("Analysis failed");
       }
 
       const result = await response.json();
       setResult(result);
+<<<<<<< Updated upstream
 
       // Handle the result - you might want to store it in state or navigate to a results page
       console.log("Analysis result:", result);
     } catch (error) {
       console.error("Error during analysis:", error);
+=======
+    } catch (error) {
+      console.error("Error during analysis:", error);
+      alert("Something went wrong during analysis.");
+>>>>>>> Stashed changes
     } finally {
       setIsLoading(false);
       setEmail("");
@@ -109,10 +159,9 @@ export default function Home() {
       router.push("/login");
     } catch (err) {
       console.error("Error during sign out:", err);
-      // Optional: show a toast or alert to the user
+      alert("Error during sign out.");
     }
   };
-
   return (
     <div className="relative flex flex-col bg-gradient-to-b from-white to-gray-50 min-h-screen overflow-hidden">
       {/* SVG Background Elements */}
@@ -246,7 +295,7 @@ export default function Home() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form  className="space-y-6">
                   <motion.div
                     className="space-y-2"
                     whileHover={{ scale: 1.01 }}
