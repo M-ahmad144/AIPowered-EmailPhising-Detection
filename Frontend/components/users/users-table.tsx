@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 
 interface UsersTableProps {
   users: User[];
@@ -21,37 +20,27 @@ interface UsersTableProps {
 
 export function UsersTable({ users, onEdit, onDelete }: UsersTableProps) {
   return (
-    <div className="border rounded-md">
-      <Table>
+    <div className="border rounded-md overflow-x-auto">
+      <Table className="min-w-[600px]">
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Role</TableHead>
-            <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {users.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="h-24 text-center">
+              <TableCell colSpan={3} className="h-24 text-center">
                 No users found.
               </TableCell>
             </TableRow>
           ) : (
             users.map((user) => (
               <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
+                <TableCell className="font-medium">{user.email}</TableCell>
                 <TableCell>{user.role}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant={user.status === "Active" ? "default" : "secondary"}
-                  >
-                    {user.status}
-                  </Badge>
-                </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end space-x-2">
                     <Button

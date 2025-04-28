@@ -7,14 +7,13 @@ export async function GET() {
   try {
     await connect();
 
-    // Get all users sorted by latest
     const users = await User.find().sort({ createdAt: -1 });
 
-    return NextResponse.json({ users });
+    return NextResponse.json({ success: true, users }); // ✅ Add success field
   } catch (error) {
     console.error("Error fetching all users:", error);
     return NextResponse.json(
-      { error: "Failed to fetch users" },
+      { success: false, error: "Failed to fetch users" }, // ✅ Also add success: false
       { status: 500 }
     );
   }
