@@ -1,82 +1,102 @@
 "use client";
 import axios from "axios";
-import useSWR, { mutate } from "swr";
+import useSWR from "swr";
 import { useState } from "react";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { UsersTable } from "@/components/users/users-table";
 import { UserDialog } from "@/components/users/user-dialog";
 import { DeleteUserDialog } from "@/components/users/delete-user-dialog";
 import type { User } from "@/lib/types";
-
-// SWR fetcher function
+import { toast } from "react-hot-toast";
+// SWR fetcher
 const fetcher = async (url: string) => {
   const response = await axios.get(url);
   if (response.data.success) {
     return response.data.users;
   }
-  throw new Error(response.data.error || "Error fetching users");
+  throw new Error(response.data.error || "Failed to fetch users");
 };
 
 export default function UsersPage() {
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
   const [isDeleteUserOpen, setIsDeleteUserOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Use SWR for data fetching
   const {
     data: users = [],
     error,
     isLoading,
-  } = useSWR("/api/admin/users/all", fetcher);
+    isValidating,
+    mutate: mutateUsers,
+  } = useSWR<User[]>("/api/admin/users/all", fetcher);
 
-  if (error) {
-    console.error("Error loading users:", error);
-  }
+  const handleEditUser = async (user) => {
+    if (!user?._id) {
+      console.error("Invalid user data");
+      return;
+    }
 
-  const handleEditUser = async (user: User) => {
+    setIsSubmitting(true);
+
     try {
-      // You would typically update the user on the server here
-      // const response = await axios.put(`/api/admin/users/${user.id}`, user);
+      const response = await axios.put(`/api/admin/users/${user._id}`, user, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
-      // Optimistically update the UI
-      const updatedUsers = users.map((u: User) =>
-        u.id === user.id ? user : u
-      );
+      if (response.data.success) {
+        // Optimistic update
+        mutateUsers(
+          (prev) =>
+            prev.map((u) => (u._id === user._id ? response.data.user : u)),
+          false
+        );
 
-      // Update SWR cache and revalidate
-      mutate("/api/admin/users/all", updatedUsers, false);
+        // Revalidate cache
+        mutateUsers();
 
-      // Then revalidate to ensure our data is correct
-      mutate("/api/admin/users/all");
+        toast.success("User updated successfully");
+      } else {
+        throw new Error(response.data.error || "Update failed");
+      }
 
-      // Close dialog
       setIsEditUserOpen(false);
       setSelectedUser(null);
-    } catch (error) {
-      console.error("Error updating user:", error);
+    } catch (err) {
+      console.error("Edit error:", err);
+      toast.error(err.response?.data?.error || err.message || "Update failed");
+
+      // Revert by re-fetching original data
+      mutateUsers();
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDeleteUser = async () => {
     if (!selectedUser) return;
+    setIsSubmitting(true);
 
     try {
-      const response = await axios.delete("/api/admin/users/deleteUser", {
-        data: { userId: selectedUser.id },
+      const response = await axios.delete(`/api/admin/users/deleteUser`, {
+        data: { userId: selectedUser._id },
       });
 
       if (response.data.success) {
-        // Revalidate the users data after deletion
-        mutate("/api/admin/users/all");
-
-        // Close delete dialog
+        const filteredUsers = users.filter((u) => u._id !== selectedUser._id);
+        mutateUsers(filteredUsers, false);
+        mutateUsers();
         setIsDeleteUserOpen(false);
         setSelectedUser(null);
       } else {
-        console.error("Failed to delete user:", response.data.error);
+        console.error("Delete failed:", response.data.error);
       }
-    } catch (error) {
-      console.error("Error deleting user:", error);
+    } catch (err) {
+      console.error("Delete error:", err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -94,7 +114,11 @@ export default function UsersPage() {
     <DashboardShell>
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
-          <p>Loading users...</p>
+          <p className="text-muted-foreground">Loading users...</p>
+        </div>
+      ) : error ? (
+        <div className="flex justify-center items-center h-64">
+          <p className="text-red-500">Error loading users. Please try again.</p>
         </div>
       ) : (
         <UsersTable
@@ -117,7 +141,7 @@ export default function UsersPage() {
         open={isDeleteUserOpen}
         onOpenChange={setIsDeleteUserOpen}
         onDelete={handleDeleteUser}
-        userName={selectedUser?.name || ""}
+        userName={selectedUser?.email || ""}
       />
     </DashboardShell>
   );

@@ -38,7 +38,7 @@ export function UsersTable({ users, onEdit, onDelete }: UsersTableProps) {
             </TableRow>
           ) : (
             users.map((user) => (
-              <TableRow key={user.id}>
+              <TableRow key={user._id}>
                 <TableCell className="font-medium">{user.email}</TableCell>
                 <TableCell>{user.role}</TableCell>
                 <TableCell className="text-right">

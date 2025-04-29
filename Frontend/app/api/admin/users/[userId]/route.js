@@ -1,4 +1,4 @@
-// app/api/admin/users/deleteUser/route.ts
+// app/api/admin/users/[userId]/route.js
 import { connect } from "@/dbConfig";
 import User from "@/models/userModel";
 import { NextResponse } from "next/server";
@@ -8,8 +8,13 @@ export async function PUT(request) {
   try {
     await connect();
 
-    const requestData = await request.json();
-    const { userId, ...updateData } = requestData;
+    // Get userId from URL
+    const url = new URL(request.url);
+    const userId = url.pathname.split("/").pop();
+
+    // Alternative method if above doesn't work:
+    // const segments = request.nextUrl.pathname.split('/');
+    // const userId = segments[segments.length - 1];
 
     if (!userId) {
       return NextResponse.json(
@@ -18,7 +23,6 @@ export async function PUT(request) {
       );
     }
 
-    // ✅ validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return NextResponse.json(
         { success: false, error: "Invalid User ID format" },
@@ -26,15 +30,8 @@ export async function PUT(request) {
       );
     }
 
-    // Check if we have data to update
-    if (Object.keys(updateData).length === 0) {
-      return NextResponse.json(
-        { success: false, error: "No update data provided" },
-        { status: 400 }
-      );
-    }
+    const updateData = await request.json();
 
-    // Find user and update with the provided data
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
       new: true,
       runValidators: true,
@@ -55,7 +52,7 @@ export async function PUT(request) {
   } catch (error) {
     console.error("Error updating user:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to update user" },
+      { success: false, error: error.message || "Failed to update user" },
       { status: 500 }
     );
   }
