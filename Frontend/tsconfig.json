@@ -35,7 +35,8 @@
     "app/otp/page.jsx",
     "app/api/admin/users/all/route.js",
     "app/api/admin/users/recent/route.js",
-    "app/api/me/route.js"
+    "app/api/me/route.js",
+    "app/api/admin/users/deleteUser/route.js"
   ],
   "exclude": ["node_modules"]
 }

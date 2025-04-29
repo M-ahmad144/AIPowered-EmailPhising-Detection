@@ -1,52 +1,82 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import axios from "axios";
+import useSWR, { mutate } from "swr";
+import { useState } from "react";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { UsersTable } from "@/components/users/users-table";
 import { UserDialog } from "@/components/users/user-dialog";
 import { DeleteUserDialog } from "@/components/users/delete-user-dialog";
 import type { User } from "@/lib/types";
 
+// SWR fetcher function
+const fetcher = async (url: string) => {
+  const response = await axios.get(url);
+  if (response.data.success) {
+    return response.data.users;
+  }
+  throw new Error(response.data.error || "Error fetching users");
+};
+
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
   const [isDeleteUserOpen, setIsDeleteUserOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-  const handleEditUser = (user: User) => {
-    setUsers((prevUsers) =>
-      prevUsers.map((u) => (u.id === user.id ? user : u))
-    );
-    setIsEditUserOpen(false);
-    setSelectedUser(null);
+  // Use SWR for data fetching
+  const {
+    data: users = [],
+    error,
+    isLoading,
+  } = useSWR("/api/admin/users/all", fetcher);
+
+  if (error) {
+    console.error("Error loading users:", error);
+  }
+
+  const handleEditUser = async (user: User) => {
+    try {
+      // You would typically update the user on the server here
+      // const response = await axios.put(`/api/admin/users/${user.id}`, user);
+
+      // Optimistically update the UI
+      const updatedUsers = users.map((u: User) =>
+        u.id === user.id ? user : u
+      );
+
+      // Update SWR cache and revalidate
+      mutate("/api/admin/users/all", updatedUsers, false);
+
+      // Then revalidate to ensure our data is correct
+      mutate("/api/admin/users/all");
+
+      // Close dialog
+      setIsEditUserOpen(false);
+      setSelectedUser(null);
+    } catch (error) {
+      console.error("Error updating user:", error);
+    }
   };
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const res = await fetch("/api/admin/users/all"); // ✅ correct route
-        const data = await res.json();
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
 
-        if (data.success) {
-          setUsers(data.users); // ✅ setUsers to data.users, not full data
-        } else {
-          console.error("User fetch error:", data.error);
-        }
-      } catch (error) {
-        console.error("Error fetching users:", error);
+    try {
+      const response = await axios.delete("/api/admin/users/deleteUser", {
+        data: { userId: selectedUser.id },
+      });
+
+      if (response.data.success) {
+        // Revalidate the users data after deletion
+        mutate("/api/admin/users/all");
+
+        // Close delete dialog
+        setIsDeleteUserOpen(false);
+        setSelectedUser(null);
+      } else {
+        console.error("Failed to delete user:", response.data.error);
       }
-    };
-
-    fetchUsers();
-  }, []);
-
-  const handleDeleteUser = () => {
-    if (selectedUser) {
-      setUsers((prevUsers) =>
-        prevUsers.filter((user) => user.id !== selectedUser.id)
-      );
-      setIsDeleteUserOpen(false);
-      setSelectedUser(null);
+    } catch (error) {
+      console.error("Error deleting user:", error);
     }
   };
 
@@ -62,11 +92,17 @@ export default function UsersPage() {
 
   return (
     <DashboardShell>
-      <UsersTable
-        users={users}
-        onEdit={openEditDialog}
-        onDelete={openDeleteDialog}
-      />
+      {isLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <p>Loading users...</p>
+        </div>
+      ) : (
+        <UsersTable
+          users={users}
+          onEdit={openEditDialog}
+          onDelete={openDeleteDialog}
+        />
+      )}
 
       <UserDialog
         open={isEditUserOpen}

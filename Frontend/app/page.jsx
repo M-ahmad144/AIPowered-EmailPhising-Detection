@@ -35,7 +35,7 @@ export default function EmailAnalysis() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch("/api/me", { 
+        const res = await fetch("/api/me", {
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
@@ -47,7 +47,7 @@ export default function EmailAnalysis() {
         }
 
         const data = await res.json();
-        
+
         if (data.success) {
           setUser(data.user);
         } else {
@@ -67,8 +67,8 @@ export default function EmailAnalysis() {
   useEffect(() => {
     const fetchPublicKey = async () => {
       try {
-        const res = await fetch('http://127.0.0.1:5000/api/public_key');
-        
+        const res = await fetch("http://127.0.0.1:5000/api/public_key");
+
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
         }
@@ -76,7 +76,7 @@ export default function EmailAnalysis() {
         const data = await res.json();
         setPublicKey(data.public_key);
       } catch (err) {
-        console.error('Failed to fetch public key:', err);
+        console.error("Failed to fetch public key:", err);
         alert("Failed to load security keys. Please refresh the page.");
       }
     };
@@ -92,14 +92,10 @@ export default function EmailAnalysis() {
 
     try {
       const publicKeyObj = forge.pki.publicKeyFromPem(publicKey);
-      const encrypted = publicKeyObj.encrypt(
-        JSON.stringify(data),
-        "RSA-OAEP", 
-        {
-          md: forge.md.sha256.create(),
-          mgf1: forge.mgf.mgf1.create(forge.md.sha256.create())
-        }
-      );
+      const encrypted = publicKeyObj.encrypt(JSON.stringify(data), "RSA-OAEP", {
+        md: forge.md.sha256.create(),
+        mgf1: forge.mgf.mgf1.create(forge.md.sha256.create()),
+      });
       return forge.util.encode64(encrypted);
     } catch (err) {
       console.error("Encryption error:", err);
@@ -110,12 +106,12 @@ export default function EmailAnalysis() {
   // Form submission handler
   const handleSubmitEmail = async (e) => {
     e.preventDefault();
-    
+
     if (!email || !emailBody) {
       alert("Please enter both email and email body!");
       return;
     }
-    
+
     // Validate email format
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       alert("Please enter a valid email address");
@@ -127,10 +123,10 @@ export default function EmailAnalysis() {
     try {
       const encryptedData = encryptData({
         email,
-        body: emailBody
+        body: emailBody,
       });
 
-      const response = await fetch('http://127.0.0.1:5000/api/predict', {
+      const response = await fetch("http://127.0.0.1:5000/api/predict", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -145,7 +141,6 @@ export default function EmailAnalysis() {
 
       const resultData = await response.json();
       setResult(resultData);
-
     } catch (error) {
       console.error("Error during analysis:", error);
       alert(error.message || "Something went wrong during analysis.");
@@ -398,7 +393,7 @@ export default function EmailAnalysis() {
 
           {userInfo?.role === "admin" && (
             <motion.div
-              className="gap-4 grid grid-cols-1 md:grid-cols-3 mt-10"
+              className="flex justify-center gap-4 mt-10 align-middle"
               initial={{ y: 40, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.3 }}
