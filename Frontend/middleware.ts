@@ -3,7 +3,7 @@ import { jwtVerify } from "jose";
 import { RateLimiterMemory } from "rate-limiter-flexible";
 
 // Constants
-const PUBLIC_PATHS = [
+const PUBLIC_PATHS = new Set([
   "/login",
   "/signup",
   "/login-otp",
@@ -15,22 +15,20 @@ const PUBLIC_PATHS = [
   "/api/verify-otp",
   "/favicon.ico",
   "/api/signout",
-];
+]);
 
-// Rate limiters (in-memory)
+// Rate limiters
 const apiRateLimiter = new RateLimiterMemory({
-  points: 30, // 30 requests
-  duration: 60, // per 60 seconds
+  points: 30,
+  duration: 60,
 });
 
 const webRateLimiter = new RateLimiterMemory({
-  points: 100, // 100 requests
-  duration: 60, // per 60 seconds
+  points: 100,
+  duration: 60,
 });
 
-/**
- * Extracts JWT token from request
- */
+// Extract JWT token
 function extractToken(req: NextRequest): string | null {
   return (
     req.cookies.get("token")?.value ||
@@ -39,9 +37,7 @@ function extractToken(req: NextRequest): string | null {
   );
 }
 
-/**
- * Validates JWT token
- */
+// Validate JWT token
 async function validateToken(token: string): Promise<boolean> {
   try {
     await jwtVerify(token, new TextEncoder().encode(process.env.JWT_SECRET!));
@@ -51,9 +47,7 @@ async function validateToken(token: string): Promise<boolean> {
   }
 }
 
-/**
- * Gets client IP address
- */
+// Get client IP
 function getClientIp(req: NextRequest): string {
   return (
     req.headers.get("x-real-ip") ||
@@ -62,9 +56,7 @@ function getClientIp(req: NextRequest): string {
   );
 }
 
-/**
- * Applies rate limiting
- */
+// Rate limiting
 async function checkRateLimit(req: NextRequest): Promise<NextResponse | null> {
   const ip = getClientIp(req);
   const isApiPath = req.nextUrl.pathname.startsWith("/api");
@@ -73,11 +65,11 @@ async function checkRateLimit(req: NextRequest): Promise<NextResponse | null> {
   try {
     await rateLimiter.consume(ip);
     return null;
-  } catch (rejRes) {
+  } catch (rejRes: any) {
     return NextResponse.json(
       {
         error: "Too many requests",
-        message: `Rate limit exceeded. Please try again in ${Math.ceil(
+        message: `Rate limit exceeded. Try again in ${Math.ceil(
           rejRes.msBeforeNext / 1000
         )} seconds.`,
       },
@@ -91,28 +83,38 @@ async function checkRateLimit(req: NextRequest): Promise<NextResponse | null> {
   }
 }
 
-/**
- * Main middleware
- */
+// Main middleware
 export async function middleware(req: NextRequest) {
   const { pathname, origin } = req.nextUrl;
 
-  // Rate limiting
+  // 1. Rate limiting
   const rateLimitResponse = await checkRateLimit(req);
   if (rateLimitResponse) return rateLimitResponse;
 
-  // Public paths
-  if (PUBLIC_PATHS.some((path) => pathname.startsWith(path))) {
+  // 2. Allow public paths
+  if (PUBLIC_PATHS.has(pathname)) {
     return NextResponse.next();
   }
 
-  // Authentication check
+  // 3. Check authentication
   const token = extractToken(req);
   const isAuthenticated = token ? await validateToken(token) : false;
 
-  // Redirect authenticated users from auth pages
-  if (isAuthenticated && ["/login", "/signup"].includes(pathname)) {
+  // 4. Redirect authenticated users from auth pages
+  if (isAuthenticated && (pathname === "/login" || pathname === "/signup")) {
     return NextResponse.redirect(`${origin}/`);
+  }
+
+  // 5. Redirect/block unauthenticated users from protected paths
+  if (!isAuthenticated) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: "Unauthorized", message: "Authentication required" },
+        { status: 401 }
+      );
+    } else {
+      return NextResponse.redirect(`${origin}/login`);
+    }
   }
 
   return NextResponse.next();
