@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import { RateLimiterMemory } from "rate-limiter-flexible";
 
-// Constants
+// PUBLIC ROUTES
 const PUBLIC_PATHS = new Set([
   "/login",
   "/signup",
@@ -17,37 +17,32 @@ const PUBLIC_PATHS = new Set([
   "/api/signout",
 ]);
 
-// Rate limiters
-const apiRateLimiter = new RateLimiterMemory({
-  points: 30,
-  duration: 60,
-});
+// RATE LIMITING
+const apiRateLimiter = new RateLimiterMemory({ points: 30, duration: 60 });
+const webRateLimiter = new RateLimiterMemory({ points: 100, duration: 60 });
 
-const webRateLimiter = new RateLimiterMemory({
-  points: 100,
-  duration: 60,
-});
-
-// Extract JWT token
+// Extract JWT token from cookies or headers
 function extractToken(req: NextRequest): string | null {
-  return (
-    req.cookies.get("token")?.value ||
-    req.headers.get("Authorization")?.replace("Bearer ", "") ||
-    null
-  );
+  const cookieToken = req.cookies.get("token")?.value;
+  const authHeader = req.headers.get("Authorization");
+  const headerToken = authHeader?.replace("Bearer ", "");
+  return cookieToken || headerToken || null;
 }
 
-// Validate JWT token
+// Validate token
 async function validateToken(token: string): Promise<boolean> {
   try {
-    await jwtVerify(token, new TextEncoder().encode(process.env.JWT_SECRET!));
+    const secret = process.env.JWT_SECRET_KEY;
+    if (!secret) throw new Error("JWT_SECRET not set in env.");
+    await jwtVerify(token, new TextEncoder().encode(secret));
     return true;
-  } catch {
+  } catch (err) {
+    console.warn("JWT verification failed:", err);
     return false;
   }
 }
 
-// Get client IP
+// Get IP
 function getClientIp(req: NextRequest): string {
   return (
     req.headers.get("x-real-ip") ||
@@ -56,14 +51,14 @@ function getClientIp(req: NextRequest): string {
   );
 }
 
-// Rate limiting
+// Rate limit middleware
 async function checkRateLimit(req: NextRequest): Promise<NextResponse | null> {
   const ip = getClientIp(req);
   const isApiPath = req.nextUrl.pathname.startsWith("/api");
-  const rateLimiter = isApiPath ? apiRateLimiter : webRateLimiter;
+  const limiter = isApiPath ? apiRateLimiter : webRateLimiter;
 
   try {
-    await rateLimiter.consume(ip);
+    await limiter.consume(ip);
     return null;
   } catch (rejRes: any) {
     return NextResponse.json(
@@ -83,29 +78,33 @@ async function checkRateLimit(req: NextRequest): Promise<NextResponse | null> {
   }
 }
 
-// Main middleware
+// MAIN MIDDLEWARE FUNCTION
 export async function middleware(req: NextRequest) {
   const { pathname, origin } = req.nextUrl;
 
-  // 1. Rate limiting
+  // 1. Log all cookies for debugging
+  console.log("📦 ALL COOKIES:", req.cookies.getAll());
+  const token = extractToken(req);
+  console.log("🔑 Extracted JWT:", token);
+
+  // 2. Rate limiting
   const rateLimitResponse = await checkRateLimit(req);
   if (rateLimitResponse) return rateLimitResponse;
 
-  // 2. Allow public paths
+  // 3. Skip public routes
   if (PUBLIC_PATHS.has(pathname)) {
     return NextResponse.next();
   }
 
-  // 3. Check authentication
-  const token = extractToken(req);
+  // 4. Check if authenticated
   const isAuthenticated = token ? await validateToken(token) : false;
 
-  // 4. Redirect authenticated users from auth pages
-  if (isAuthenticated && (pathname === "/login" || pathname === "/signup")) {
+  // 5. Redirect logged-in user away from auth pages
+  if (isAuthenticated && ["/login", "/signup"].includes(pathname)) {
     return NextResponse.redirect(`${origin}/`);
   }
 
-  // 5. Redirect/block unauthenticated users from protected paths
+  // 6. Block unauthenticated access
   if (!isAuthenticated) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json(

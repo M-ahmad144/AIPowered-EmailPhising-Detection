@@ -1,8 +1,11 @@
 # Setup
+
 ## .env File
-1) create an env file in the home root
-2) add 2 variables: 
-    MONGODB_URL --the url to mongodb atlas including admin info (name, password), JWT_SECRET_KEY --secret token for jwt token (cookies)
+
+1. create an env file in the home root
+2. add 2 variables:
+   MONGODB_URL --the url to mongodb atlas including admin info (name, password), \_KEY --secret token for jwt token (cookies)
+
 ## RUN npm i (to install all dependecies)
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
