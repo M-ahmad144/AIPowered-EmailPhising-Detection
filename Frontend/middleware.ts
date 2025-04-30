@@ -105,7 +105,7 @@ export async function middleware(req: NextRequest) {
 
   // 6. Admin-only route protection
   const userRole = payload?.role;
-  console.log(payload);
+
   if (isAdminRoute(pathname)) {
     if (userRole !== "admin") {
       return NextResponse.json(

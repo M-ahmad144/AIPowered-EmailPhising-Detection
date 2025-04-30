@@ -426,7 +426,7 @@ export default function EmailAnalysis() {
               >
                 <Button
                   variant="outline"
-                  onClick={() => router.push("/threats")}
+                  onClick={() => router.push("/threat-activity")}
                   className="group bg-white/80 hover:bg-red-50 shadow-sm backdrop-blur-sm border border-gray-200 hover:border-red-200 w-full h-16 transition-all duration-300"
                 >
                   <div className="flex justify-between items-center w-full">

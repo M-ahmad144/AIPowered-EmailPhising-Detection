@@ -1,14 +1,14 @@
 // lib/auth.ts
 import { jwtVerify } from "jose";
 
-export async function verifyToken(token: string) {
+export async function getUserFromToken(token?: string) {
   try {
-    const { payload } = await jwtVerify(
-      token,
-      new TextEncoder().encode(process.env.JWT_SECRET!)
-    );
-    return payload; // you can get user info here if needed
-  } catch (error) {
+    if (!token) return null;
+
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET_KEY);
+    const { payload } = await jwtVerify(token, secret);
+    return payload;
+  } catch {
     return null;
   }
 }

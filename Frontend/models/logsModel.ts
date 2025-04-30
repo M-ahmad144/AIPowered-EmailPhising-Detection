@@ -16,7 +16,7 @@ const logSchema = new mongoose.Schema(
       default: "unknown",
     },
     meta: {
-      type: mongoose.Schema.Types.Mixed, // optional metadata
+      type: mongoose.Schema.Types.Mixed,
     },
     timestamp: {
       type: Date,
