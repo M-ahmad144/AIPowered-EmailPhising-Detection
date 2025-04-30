@@ -82,10 +82,7 @@ async function checkRateLimit(req: NextRequest): Promise<NextResponse | null> {
 export async function middleware(req: NextRequest) {
   const { pathname, origin } = req.nextUrl;
 
-  // 1. Log all cookies for debugging
-  console.log("📦 ALL COOKIES:", req.cookies.getAll());
   const token = extractToken(req);
-  console.log("🔑 Extracted JWT:", token);
 
   // 2. Rate limiting
   const rateLimitResponse = await checkRateLimit(req);
@@ -99,11 +96,9 @@ export async function middleware(req: NextRequest) {
   // 4. Check if authenticated
   const isAuthenticated = token ? await validateToken(token) : false;
 
-  // 5. Redirect logged-in user away from auth pages
-  if (isAuthenticated && ["/login", "/signup"].includes(pathname)) {
+  if (isAuthenticated && (pathname === "/login" || pathname === "/signup")) {
     return NextResponse.redirect(`${origin}/`);
   }
-
   // 6. Block unauthenticated access
   if (!isAuthenticated) {
     if (pathname.startsWith("/api/")) {
