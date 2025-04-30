@@ -418,6 +418,28 @@ export default function EmailAnalysis() {
                   </div>
                 </Button>
               </motion.div>
+
+              {/* Threat Activity */}
+              <motion.div
+                whileHover={{ scale: 1.05, y: -5 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button
+                  variant="outline"
+                  onClick={() => router.push("/threats")}
+                  className="group bg-white/80 hover:bg-red-50 shadow-sm backdrop-blur-sm border border-gray-200 hover:border-red-200 w-full h-16 transition-all duration-300"
+                >
+                  <div className="flex justify-between items-center w-full">
+                    <div className="flex items-center">
+                      <div className="bg-red-100 mr-3 p-2 rounded-full">
+                        <AlertTriangle className="w-5 h-5 text-red-600" />
+                      </div>
+                      <span>Threat Activity</span>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-red-500 transition-all group-hover:translate-x-1" />
+                  </div>
+                </Button>
+              </motion.div>
             </motion.div>
           )}
         </div>

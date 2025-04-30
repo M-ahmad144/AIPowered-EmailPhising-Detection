@@ -1,27 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import { RateLimiterMemory } from "rate-limiter-flexible";
+import { PUBLIC_PATHS, isAdminRoute } from "@/lib/protect";
 
-// PUBLIC ROUTES
-const PUBLIC_PATHS = new Set([
-  "/login",
-  "/signup",
-  "/login-otp",
-  "/otp",
-  "/api/login",
-  "/api/generate-otp",
-  "/api/resend-otp",
-  "/api/verify-login",
-  "/api/verify-otp",
-  "/favicon.ico",
-  "/api/signout",
-]);
-
-// RATE LIMITING
+// Rate limiting setup
 const apiRateLimiter = new RateLimiterMemory({ points: 30, duration: 60 });
 const webRateLimiter = new RateLimiterMemory({ points: 100, duration: 60 });
 
-// Extract JWT token from cookies or headers
+// Extract token from cookie or Authorization header
 function extractToken(req: NextRequest): string | null {
   const cookieToken = req.cookies.get("token")?.value;
   const authHeader = req.headers.get("Authorization");
@@ -29,20 +15,25 @@ function extractToken(req: NextRequest): string | null {
   return cookieToken || headerToken || null;
 }
 
-// Validate token
-async function validateToken(token: string): Promise<boolean> {
+// Verify JWT and return decoded payload
+async function validateToken(
+  token: string
+): Promise<{ valid: boolean; payload?: any }> {
   try {
     const secret = process.env.JWT_SECRET_KEY;
-    if (!secret) throw new Error("JWT_SECRET not set in env.");
-    await jwtVerify(token, new TextEncoder().encode(secret));
-    return true;
+    if (!secret) throw new Error("JWT_SECRET_KEY not set in env.");
+    const { payload } = await jwtVerify(
+      token,
+      new TextEncoder().encode(secret)
+    );
+    return { valid: true, payload };
   } catch (err) {
     console.warn("JWT verification failed:", err);
-    return false;
+    return { valid: false };
   }
 }
 
-// Get IP
+// Get client IP for rate limiting
 function getClientIp(req: NextRequest): string {
   return (
     req.headers.get("x-real-ip") ||
@@ -51,7 +42,7 @@ function getClientIp(req: NextRequest): string {
   );
 }
 
-// Rate limit middleware
+// Handle rate limiting
 async function checkRateLimit(req: NextRequest): Promise<NextResponse | null> {
   const ip = getClientIp(req);
   const isApiPath = req.nextUrl.pathname.startsWith("/api");
@@ -78,29 +69,30 @@ async function checkRateLimit(req: NextRequest): Promise<NextResponse | null> {
   }
 }
 
-// MAIN MIDDLEWARE FUNCTION
+// Main middleware function
 export async function middleware(req: NextRequest) {
   const { pathname, origin } = req.nextUrl;
 
-  const token = extractToken(req);
-
-  // 2. Rate limiting
+  // 1. Rate limiting
   const rateLimitResponse = await checkRateLimit(req);
   if (rateLimitResponse) return rateLimitResponse;
 
-  // 3. Skip public routes
-  if (PUBLIC_PATHS.has(pathname)) {
-    return NextResponse.next();
-  }
+  // 2. Allow public paths
+  if (PUBLIC_PATHS.has(pathname)) return NextResponse.next();
 
-  // 4. Check if authenticated
-  const isAuthenticated = token ? await validateToken(token) : false;
+  // 3. Validate token
+  const token = extractToken(req);
+  const { valid, payload } = token
+    ? await validateToken(token)
+    : { valid: false };
 
-  if (isAuthenticated && (pathname === "/login" || pathname === "/signup")) {
+  // 4. Redirect if authenticated user tries to access auth pages
+  if (valid && (pathname === "/login" || pathname === "/signup")) {
     return NextResponse.redirect(`${origin}/`);
   }
-  // 6. Block unauthenticated access
-  if (!isAuthenticated) {
+
+  // 5. Block unauthenticated users
+  if (!valid) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json(
         { error: "Unauthorized", message: "Authentication required" },
@@ -111,9 +103,22 @@ export async function middleware(req: NextRequest) {
     }
   }
 
+  // 6. Admin-only route protection
+  const userRole = payload?.role;
+  console.log(payload);
+  if (isAdminRoute(pathname)) {
+    if (userRole !== "admin") {
+      return NextResponse.json(
+        { error: "Forbidden", message: "Admin access only" },
+        { status: 403 }
+      );
+    }
+  }
+
   return NextResponse.next();
 }
 
+// Apply middleware to all relevant paths
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon\\.ico).*)"],
 };

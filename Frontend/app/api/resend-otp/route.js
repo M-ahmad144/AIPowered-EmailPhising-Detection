@@ -4,26 +4,49 @@ import bcrypt from "bcryptjs";
 import { connect } from "../../../dbConfig";
 import Otp from "../../../models/otpModel";
 import User from "../../../models/userModel";
+import Log from "../../../models/logsModel";
 
 export async function POST(request) {
+  const ip = request.headers.get("x-forwarded-for") || "unknown";
+
   try {
     await connect();
 
     const { email } = await request.json();
+
     if (!email) {
+      // Log missing email field
+      await Log.create({
+        userId: null,
+        action: "RESET_OTP_FAILED_MISSING_EMAIL",
+        ipAddress: ip,
+      });
+
       return NextResponse.json(
         { message: "Email is required" },
         { status: 400 }
       );
     }
 
-    //  Step 1: Delete unverified user (if exists)
+    // Step 1: Delete unverified user (if exists)
     await User.deleteOne({ email, isVerified: false });
+    await Log.create({
+      userId: null,
+      action: "RESET_OTP_USER_DELETED",
+      ipAddress: ip,
+      details: `Deleted unverified user with email: ${email}`,
+    });
 
-    // 🔄 Step 2: Remove existing OTPs
+    // Step 2: Remove existing OTPs
     await Otp.deleteMany({ email });
+    await Log.create({
+      userId: null,
+      action: "RESET_OTP_OLD_OTPS_REMOVED",
+      ipAddress: ip,
+      details: `Removed existing OTPs for email: ${email}`,
+    });
 
-    // 🔐 Step 3: Generate new OTP
+    // Step 3: Generate new OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedOtp = bcrypt.hashSync(otp, 10);
 
@@ -31,12 +54,18 @@ export async function POST(request) {
       email,
       otp: hashedOtp,
       createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
     });
 
     await newOtp.save();
+    await Log.create({
+      userId: null,
+      action: "RESET_OTP_GENERATED",
+      ipAddress: ip,
+      details: `Generated new OTP for email: ${email}`,
+    });
 
-    // ✉️ Step 4: Send email
+    // Step 4: Send email
     const transporter = nodemailer.createTransport({
       service: process.env.EMAIL_SERVICE,
       auth: {
@@ -63,11 +92,28 @@ export async function POST(request) {
       `,
     });
 
+    // Log the successful email send
+    await Log.create({
+      userId: null,
+      action: "RESET_OTP_EMAIL_SENT",
+      ipAddress: ip,
+      details: `OTP sent to email: ${email}`,
+    });
+
     return NextResponse.json({
       message: "OTP resent and unverified user removed",
     });
   } catch (error) {
     console.error("Error resending OTP:", error);
+
+    // Log the error
+    await Log.create({
+      userId: null,
+      action: "RESET_OTP_FAILED_SERVER_ERROR",
+      ipAddress: ip,
+      details: error.message,
+    });
+
     return NextResponse.json(
       { message: "Failed to resend OTP" },
       { status: 500 }
