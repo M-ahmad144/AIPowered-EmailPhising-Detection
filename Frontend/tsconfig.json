@@ -37,7 +37,8 @@
     "app/api/admin/users/recent/route.js",
     "app/api/me/route.js",
     "app/api/admin/users/deleteUser/route.js",
-    "app/api/admin/users/[userId]/route.js"
+    "app/api/admin/users/[userId]/route.js",
+    "app/api/admin/ban-ip/route.js"
   ],
   "exclude": ["node_modules"]
 }

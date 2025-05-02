@@ -8,6 +8,7 @@ import {
   CheckCircle,
   X,
   Loader2,
+  Ban,
 } from "lucide-react";
 
 import axios from "axios";
@@ -28,8 +29,10 @@ export default function AdminLogsDashboard() {
     setLoading(true);
     try {
       const response = await axios.get("api/admin/logs/all");
+
       // Handle the data structure where logs are in response.data.logs
       const logsData = response.data.logs || response.data;
+      console.log(logsData);
       setLogs(Array.isArray(logsData) ? logsData : []);
     } catch (error) {
       console.error("Error fetching logs:", error);
@@ -46,19 +49,26 @@ export default function AdminLogsDashboard() {
   };
 
   // Handle log deletion
-  const handleDeleteLog = async (logId) => {
+  const handleBanUser = async (
+    ipAddress: string,
+    reason = "Suspicious activity"
+  ) => {
     setLoading(true);
     try {
-      await axios.delete(`api/admin/logs/${logId}`);
+      // Send IP address and reason in the POST request body
+      await axios.post("/api/admin/ban-ip", {
+        ipAddress,
+        reason,
+      });
 
-      // Remove the deleted log from the UI
-      setLogs(logs.filter((log) => log._id !== logId));
-
-      showNotification("Log deleted successfully", "success");
-    } catch (error) {
-      console.error("Error deleting log:", error);
       showNotification(
-        `Error deleting log: ${error.response?.data?.message || error.message}`,
+        `IP ${ipAddress} has been banned successfully`,
+        "success"
+      );
+    } catch (error) {
+      console.error("Error banning IP:", error);
+      showNotification(
+        `Error banning IP: ${error.response?.data?.error || error.message}`,
         "error"
       );
     } finally {
@@ -73,14 +83,9 @@ export default function AdminLogsDashboard() {
   };
 
   // Filter logs based on search term
-  const filteredLogs = Array.isArray(logs)
-    ? logs.filter(
-        (log) =>
-          log.action?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          log.ipAddress?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          log.userId?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : [];
+  const filteredLogs = logs.filter((log) =>
+    log.ipAddress.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   // Format date
   const formatDate = (dateString) => {
@@ -211,7 +216,13 @@ export default function AdminLogsDashboard() {
                       scope="col"
                       className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider"
                     >
-                      User ID
+                      User Email
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider"
+                    >
+                      User Role
                     </th>
                     <th
                       scope="col"
@@ -227,7 +238,7 @@ export default function AdminLogsDashboard() {
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3 font-medium text-gray-500 text-xs text-left uppercase tracking-wider"
+                      className="px-6 py-3 font-medium text-gray-500 text-xs text-right uppercase tracking-wider"
                     >
                       Timestamp
                     </th>
@@ -235,28 +246,52 @@ export default function AdminLogsDashboard() {
                       scope="col"
                       className="px-6 py-3 font-medium text-gray-500 text-xs text-right uppercase tracking-wider"
                     >
-                      Actions
+                      Ban User
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredLogs.map((log) => (
                     <tr key={log._id} className="hover:bg-gray-50">
+                      {/* Display email */}
                       <td className="px-6 py-4 text-gray-500 text-sm whitespace-nowrap">
-                        {log.userId || "Unknown"}
+                        {log.userId?.email || "Unknown"}
                       </td>
+
+                      {/* Display role */}
+                      <td className="px-6 py-4 text-gray-500 text-sm whitespace-nowrap">
+                        {log.userId?.role || "Unknown"}
+                      </td>
+
+                      {/* Display action */}
                       <td className="px-6 py-4 font-medium text-gray-900 text-sm whitespace-nowrap">
                         {log.action}
                       </td>
+
+                      {/* Display IP Address */}
                       <td className="px-6 py-4 text-gray-500 text-sm whitespace-nowrap">
                         {log.ipAddress}
                       </td>
+
+                      {/* Display timestamp */}
                       <td className="px-6 py-4 text-gray-500 text-sm whitespace-nowrap">
                         {formatDate(log.timestamp || log.createdAt)}
                       </td>
+
+                      <td className="px-6 py-4 text-gray-500 text-sm whitespace-nowrap">
+                        {log.banned ? (
+                          <p className="text-red-500">Banned</p>
+                        ) : (
+                          <p className="text-green-500">Not Banned</p>
+                        )}
+                      </td>
+
+                      {/* Action button */}
                       <td className="px-6 py-4 font-medium text-sm text-right whitespace-nowrap">
                         <button
-                          onClick={() => handleDeleteLog(log._id)}
+                          onClick={() =>
+                            handleBanUser(log.ipAddress, "Suspicious activity")
+                          }
                           className="text-red-600 hover:text-red-800"
                           title="Delete log"
                           disabled={loading}
@@ -264,7 +299,7 @@ export default function AdminLogsDashboard() {
                           {loading ? (
                             <Loader2 className="w-5 h-5 animate-spin" />
                           ) : (
-                            <Trash className="w-5 h-5" />
+                            <Ban className="w-5 h-5" />
                           )}
                         </button>
                       </td>

@@ -1,4 +1,3 @@
-// app/api/logs/[userId]/route.ts
 import { NextResponse } from "next/server";
 import { connect } from "@/dbConfig";
 import Log from "@/models/logsModel";
@@ -19,7 +18,12 @@ export async function GET(req) {
       );
     }
 
-    const logs = await Log.find({}).sort({ createdAt: -1 });
+    const logs = await Log.find({})
+      .populate({
+        path: "userId",
+        select: "email role",
+      })
+      .sort({ createdAt: -1 });
 
     return NextResponse.json({ logs }, { status: 200 });
   } catch (err) {
