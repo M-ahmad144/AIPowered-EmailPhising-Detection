@@ -22,10 +22,6 @@ const logSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
-    banned: {
-      type: Boolean,
-      default: false, // Track banned status for each IP
-    },
   },
   {
     timestamps: true,
