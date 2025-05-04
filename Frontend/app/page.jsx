@@ -414,7 +414,7 @@ export default function EmailAnalysis() {
                       {/* Header */}
                       <div
                         className={`p-4 ${
-                          topClass === "phishing"
+                          topClass === "phishing_url"
                             ? "bg-red-500"
                             : "bg-green-500"
                         } text-white`}
@@ -480,7 +480,7 @@ export default function EmailAnalysis() {
                               <div
                                 style={{ width: `${result.confidence * 100}%` }}
                                 className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center ${
-                                  topClass === "phishing"
+                                  topClass === "phishing_url"
                                     ? "bg-red-500"
                                     : "bg-green-500"
                                 }`}
