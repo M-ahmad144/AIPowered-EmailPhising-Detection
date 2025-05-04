@@ -67,7 +67,9 @@ export default function EmailAnalysis() {
   useEffect(() => {
     const fetchPublicKey = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:5000/api/public_key");
+        const res = await fetch(
+          "https://is-project-backend-production.up.railway.app/api/public_key"
+        );
 
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
@@ -126,13 +128,16 @@ export default function EmailAnalysis() {
         body: emailBody,
       });
 
-      const response = await fetch("http://127.0.0.1:5000/api/predict", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ encrypted: encryptedData }),
-      });
+      const response = await fetch(
+        "https://is-project-backend-production.up.railway.app/api/predict",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ encrypted: encryptedData }),
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -355,40 +360,141 @@ export default function EmailAnalysis() {
               </CardContent>
             </Card>
 
-            {result && (
-              <div className="bg-gray-50 mt-6 p-4 border rounded-lg">
-                <h3 className="mb-2 font-semibold text-gray-800 text-lg">
-                  Analysis Result
-                </h3>
-                <p>
-                  <strong>Prediction:</strong>{" "}
-                  <span className="text-blue-600">
-                    {result.prediction === "phishing"
-                      ? "Phishing Email"
-                      : "Not Phishing"}
-                  </span>
-                </p>
-                <p>
-                  <strong>Email Check:</strong> {result.email_check}
-                </p>
-                <p>
-                  <strong>Confidence:</strong>{" "}
-                  {(result.confidence * 100).toFixed(2)}%
-                </p>
-                <div className="mt-2">
-                  <h4 className="font-medium">All Probabilities:</h4>
-                  <ul className="pl-5 text-sm list-disc">
-                    {Object.entries(result.all_probabilities).map(
-                      ([key, value]) => (
-                        <li key={key}>
-                          {key}: {(value * 100).toFixed(6)}%
-                        </li>
-                      )
-                    )}
-                  </ul>
-                </div>
-              </div>
-            )}
+            {result &&
+              (() => {
+                const probabilities = result.all_probabilities || {};
+                const sortedEntries = Object.entries(probabilities).sort(
+                  (a, b) => b[1] - a[1]
+                );
+                const topClass = sortedEntries[0]?.[0]?.toLowerCase();
+                const phishingUrlScore = probabilities["phishing_url"] || 0;
+                const isPhishingUrlHigh = phishingUrlScore > 0.9;
+
+                return (
+                  <div className="flex justify-center my-8 w-full">
+                    <div className="bg-gradient-to-r from-indigo-50 to-blue-50 shadow-md border border-indigo-100 rounded-xl w-full max-w-xl overflow-hidden">
+                      {/* Header */}
+                      <div
+                        className={`p-4 ${
+                          topClass === "phishing"
+                            ? "bg-red-500"
+                            : "bg-green-500"
+                        } text-white`}
+                      >
+                        <h3 className="font-bold text-xl text-center">
+                          Analysis Result
+                        </h3>
+                      </div>
+
+                      {/* Content */}
+                      <div className="p-5">
+                        {/* Prediction */}
+                        <div className="flex justify-between items-center bg-white shadow-sm mb-4 p-3 rounded-lg">
+                          <span className="font-medium text-gray-700">
+                            Prediction:
+                          </span>
+                          <span
+                            className={`font-bold px-3 py-1 rounded-full ${
+                              topClass === "phishing"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-green-100 text-green-700"
+                            }`}
+                          >
+                            {topClass === "phishing"
+                              ? "Phishing Email"
+                              : "Not Phishing"}
+                          </span>
+                        </div>
+
+                        {/* Warning for phishing_url */}
+                        {isPhishingUrlHigh && (
+                          <div className="bg-yellow-100 mb-4 p-3 border-yellow-500 border-l-4 rounded text-yellow-800">
+                            ⚠️ <strong>Warning:</strong> This email contains a
+                            URL that is highly likely to be phishing (
+                            {(phishingUrlScore * 100).toFixed(2)}%).
+                          </div>
+                        )}
+
+                        {/* Email Check */}
+                        <div className="bg-white shadow-sm mb-4 p-3 rounded-lg">
+                          <div className="mb-1 font-medium text-gray-700">
+                            Email Check:
+                          </div>
+                          <div className="pl-2 border-indigo-300 border-l-4">
+                            {result.email_check}
+                          </div>
+                        </div>
+
+                        {/* Confidence */}
+                        <div className="mb-4">
+                          <div className="mb-2 font-medium text-gray-700">
+                            Confidence:
+                          </div>
+                          <div className="relative pt-1">
+                            <div className="flex justify-between items-center mb-2">
+                              <div>
+                                <span className="inline-block bg-indigo-200 px-2 py-1 rounded-full font-semibold text-indigo-700 text-xs uppercase">
+                                  {(result.confidence * 100).toFixed(2)}%
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex bg-gray-200 mb-4 rounded h-2 overflow-hidden text-xs">
+                              <div
+                                style={{ width: `${result.confidence * 100}%` }}
+                                className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center ${
+                                  topClass === "phishing"
+                                    ? "bg-red-500"
+                                    : "bg-green-500"
+                                }`}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* All Probabilities */}
+                        <div className="bg-white shadow-sm p-4 rounded-lg">
+                          <h4 className="mb-3 pb-2 border-b font-medium text-gray-800">
+                            All Probabilities:
+                          </h4>
+                          <div className="space-y-3">
+                            {Object.entries(probabilities).map(
+                              ([key, value]) => (
+                                <div
+                                  key={key}
+                                  className="gap-2 grid grid-cols-3"
+                                >
+                                  <span className="col-span-1 font-medium text-gray-600">
+                                    {key}:
+                                  </span>
+                                  <div className="col-span-2">
+                                    <div className="flex items-center">
+                                      <div className="bg-gray-200 mr-2 rounded-full w-full h-2.5">
+                                        <div
+                                          className={`h-2.5 rounded-full ${
+                                            key
+                                              .toLowerCase()
+                                              .includes("phishing")
+                                              ? "bg-red-400"
+                                              : "bg-green-400"
+                                          }`}
+                                          style={{ width: `${value * 100}%` }}
+                                        ></div>
+                                      </div>
+                                      <span className="font-medium text-gray-900 text-sm">
+                                        {(value * 100).toFixed(2)}%
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
           </motion.div>
 
           {userInfo?.role === "admin" && (

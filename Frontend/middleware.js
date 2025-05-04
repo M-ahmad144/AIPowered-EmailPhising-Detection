@@ -73,19 +73,7 @@ export async function middleware(req) {
   const { pathname, origin } = req.nextUrl;
   const clientIp = getClientIp(req);
 
-  // 1. Check if the IP address is banned (via your API route)
-  // try {
-  //   const banCheck = await fetch(`${origin}/api/check-ban?ip=${clientIp}`);
-  //   if (banCheck.ok) {
-  //     const { banned } = await banCheck.json();
-  //     if (banned) {
-  //       return NextResponse.redirect(`${origin}/banned`);
-  //     }
-  //   }
-  // } catch (err) {
-  //   console.error("Ban‐check request failed:", err);
-  //   // optional: allow through, or treat as banned
-  // }
+
 
   // 2. Rate limiting
   const rateLimitResponse = await checkRateLimit(req);
