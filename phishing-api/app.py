@@ -3,18 +3,23 @@ from flask_cors import CORS
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import padding as sym_padding
+from cryptography.hazmat.backends import default_backend
 import torch
 import re
 import json
 import base64
+import os
 
 app = Flask(__name__)
 CORS(app)
 
-# --- Generate RSA Key Pair (only once when server starts) ---
+# --- Generate RSA Key Pair ---
 private_key = rsa.generate_private_key(
     public_exponent=65537,
     key_size=2048,
+    backend=default_backend()
 )
 public_key = private_key.public_key()
 
@@ -27,7 +32,7 @@ model = AutoModelForSequenceClassification.from_pretrained(
 )
 
 def decrypt_data(encrypted_data_b64):
-    """Decrypt base64-encoded encrypted data"""
+    """Decrypt base64-encoded encrypted data (RSA only)"""
     try:
         encrypted_bytes = base64.b64decode(encrypted_data_b64)
         decrypted_bytes = private_key.decrypt(
@@ -40,7 +45,44 @@ def decrypt_data(encrypted_data_b64):
         )
         return json.loads(decrypted_bytes.decode('utf-8'))
     except Exception as e:
-        app.logger.error(f"[Decryption Error]: {str(e)}")
+        app.logger.error(f"[RSA Decryption Error]: {str(e)}")
+        raise ValueError("Invalid or corrupted encrypted data")
+
+def decrypt_hybrid(encrypted_data):
+    """Decrypt hybrid encrypted data (AES key with RSA, data with AES)"""
+    try:
+        if isinstance(encrypted_data, str):
+            encrypted_data = json.loads(encrypted_data)
+            
+        # Decrypt AES key with RSA
+        encrypted_aes_key = base64.b64decode(encrypted_data['encrypted_key'])
+        aes_key = private_key.decrypt(
+            encrypted_aes_key,
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
+        )
+        
+        # Decrypt data with AES
+        iv = base64.b64decode(encrypted_data['iv'])
+        cipher = Cipher(
+            algorithms.AES(aes_key),
+            modes.CBC(iv),
+            backend=default_backend()
+        )
+        decryptor = cipher.decryptor()
+        
+        # Unpad the decrypted data
+        unpadder = sym_padding.PKCS7(128).unpadder()
+        encrypted_bytes = base64.b64decode(encrypted_data['encrypted_data'])
+        decrypted_padded = decryptor.update(encrypted_bytes) + decryptor.finalize()
+        decrypted = unpadder.update(decrypted_padded) + unpadder.finalize()
+        
+        return json.loads(decrypted.decode('utf-8'))
+    except Exception as e:
+        app.logger.error(f"[Hybrid Decryption Error]: {str(e)}")
         raise ValueError("Invalid or corrupted encrypted data")
 
 def check_email_address(email):
@@ -99,8 +141,11 @@ def analyze_email():
             return jsonify({"error": "Missing request body"}), 400
 
         if 'encrypted' in data:
-            
-            data = decrypt_data(data['encrypted'])
+            # Handle both old RSA-only and new hybrid encryption
+            if isinstance(data['encrypted'], dict) and 'encrypted_key' in data['encrypted']:
+                data = decrypt_hybrid(data['encrypted'])
+            else:
+                data = decrypt_data(data['encrypted'])
 
         email = data.get('email')
         body = data.get('body')

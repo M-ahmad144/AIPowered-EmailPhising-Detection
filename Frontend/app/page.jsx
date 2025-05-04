@@ -68,7 +68,7 @@ export default function EmailAnalysis() {
     const fetchPublicKey = async () => {
       try {
         const res = await fetch(
-          "https://is-project-backend-production.up.railway.app/api/public_key"
+          "http://localhost:5000/api/public_key"
         );
 
         if (!res.ok) {
@@ -86,7 +86,6 @@ export default function EmailAnalysis() {
     fetchPublicKey();
   }, []);
 
-  // Encryption function
   const encryptData = (data) => {
     if (!publicKey) {
       throw new Error("Public key not available");
@@ -105,7 +104,47 @@ export default function EmailAnalysis() {
     }
   };
 
-  // Form submission handler
+  const encryptHybrid = (data) => {
+    if (!publicKey) {
+      throw new Error("Public key not available");
+    }
+
+    try {
+      // Generate random AES key and IV
+      const aesKey = forge.random.getBytesSync(32); // 256-bit key
+      const iv = forge.random.getBytesSync(16); // 128-bit IV
+      
+      // Convert data to JSON string
+      const jsonData = JSON.stringify(data);
+      
+      // Create AES-CBC cipher
+      const cipher = forge.cipher.createCipher('AES-CBC', aesKey);
+      cipher.start({ iv });
+      cipher.update(forge.util.createBuffer(jsonData));
+      cipher.finish();
+      
+      // Get encrypted data
+      const encryptedData = cipher.output.getBytes();
+      
+      // Encrypt AES key with RSA
+      const publicKeyObj = forge.pki.publicKeyFromPem(publicKey);
+      const encryptedKey = publicKeyObj.encrypt(aesKey, "RSA-OAEP", {
+        md: forge.md.sha256.create(),
+        mgf1: forge.mgf.mgf1.create(forge.md.sha256.create()),
+      });
+      
+      // Return as base64 encoded strings
+      return {
+        encrypted_key: forge.util.encode64(encryptedKey),
+        iv: forge.util.encode64(iv),
+        encrypted_data: forge.util.encode64(encryptedData)
+      };
+    } catch (err) {
+      console.error("Hybrid encryption error:", err);
+      throw new Error("Failed to encrypt data");
+    }
+  };
+
   const handleSubmitEmail = async (e) => {
     e.preventDefault();
 
@@ -114,7 +153,6 @@ export default function EmailAnalysis() {
       return;
     }
 
-    // Validate email format
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       alert("Please enter a valid email address");
       return;
@@ -123,13 +161,14 @@ export default function EmailAnalysis() {
     setIsLoading(true);
 
     try {
-      const encryptedData = encryptData({
+      // Use hybrid encryption for larger data
+      const encryptedData = encryptHybrid({
         email,
         body: emailBody,
       });
 
       const response = await fetch(
-        "https://is-project-backend-production.up.railway.app/api/predict",
+        "http://localhost:5000/api/predict",
         {
           method: "POST",
           headers: {
@@ -153,7 +192,6 @@ export default function EmailAnalysis() {
       setIsLoading(false);
     }
   };
-
   const handleSignOut = async () => {
     try {
       const res = await fetch("/api/signout", {
@@ -395,25 +433,25 @@ export default function EmailAnalysis() {
                           </span>
                           <span
                             className={`font-bold px-3 py-1 rounded-full ${
-                              topClass === "phishing"
+                              topClass === "phishing_url"
                                 ? "bg-red-100 text-red-700"
                                 : "bg-green-100 text-green-700"
                             }`}
                           >
-                            {topClass === "phishing"
+                            {topClass === "phishing_url"
                               ? "Phishing Email"
                               : "Not Phishing"}
                           </span>
                         </div>
 
-                        {/* Warning for phishing_url */}
+                        {/* Warning for phishing_url
                         {isPhishingUrlHigh && (
                           <div className="bg-yellow-100 mb-4 p-3 border-yellow-500 border-l-4 rounded text-yellow-800">
                             ⚠️ <strong>Warning:</strong> This email contains a
                             URL that is highly likely to be phishing (
                             {(phishingUrlScore * 100).toFixed(2)}%).
                           </div>
-                        )}
+                        )} */}
 
                         {/* Email Check */}
                         <div className="bg-white shadow-sm mb-4 p-3 rounded-lg">
